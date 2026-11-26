@@ -52,7 +52,7 @@
     const head = ['Sıra', 'No', 'Ad Soyad', 'Unvan', 'Fed', 'Kulüp', 'Puan', ...order.map(k => defs[k].short), 'Ödül sırası', 'Durum'];
     const aoa = [head].concat(o.rows.map(r => {
       const wd = r.p.status === 'withdrawn';
-      return [r.rank, r.p.no, o.nm(r.p), r.p.title, r.p.fed, r.p.club, r.pts, ...order.map(k => (typeof r.tb[k] === 'number' ? Math.round(r.tb[k] * 100) / 100 : '')), wd ? '' : ++pz, wd ? 'çekildi' : ''].map(cell);
+      return [r.tied ? "" : r.rank, r.p.no, o.nm(r.p), r.p.title, r.p.fed, r.p.club, r.pts, ...order.map(k => (typeof r.tb[k] === 'number' ? Math.round(r.tb[k] * 100) / 100 : '')), wd ? '' : ++pz, wd ? 'çekildi' : ''].map(cell);
     }));
     const wb = X.utils.book_new();
     X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet(aoa), 'Sıralama');

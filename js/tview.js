@@ -437,7 +437,7 @@
     <div class="card noprint"><div class="row tight"><select data-act="standR" style="width:auto">${sel}</select><button class="b sec" data-act="expStand">Excel’e aktar</button><button class="b sec" data-act="print">Yazdır</button></div></div>
     <div class="card"><div class="printonly"><b>${esc(tn.info.name)} – ${esc(c.name)}</b> – ${upto}. Tur Sonrası Sıralama ${esc(A.fmtDate(tn.info.date))} ${esc(tn.info.place)}</div>
     <div class="tblw"><table><tr><th class="n">Sıra</th><th class="n">No</th><th>Ad Soyad</th><th>Kulüp</th><th class="n">UKD/ELO</th><th class="n">Puan</th>${cols.map(k => `<th class="n" title="${esc(E.TB_DEFS[k].name)}">${E.TB_DEFS[k].short}</th>`).join('')}<th class="n" title="Çekilen sporcuya ödül verilmez">Ödül</th></tr>
-    ${rows.map(r => { const wd = r.p.status === 'withdrawn'; const pz = wd ? '' : ++prize; return `<tr class="${wd ? 'out' : ''}"><td class="n"><b>${r.rank}</b></td><td class="n">${r.p.no}</td><td><b>${esc(nm(r.p))}</b>${r.p.female ? ' <span class="pill gray">K</span>' : ''}${wd ? ` <span class="pill err">çekildi${r.p.wdFrom ? ' (' + r.p.wdFrom + '. turdan)' : ''}</span>` : ''}</td><td>${esc(r.p.club)}</td><td class="n">${rtg(r.p)}</td><td class="n"><b>${fmt(r.pts)}</b></td>
+    ${rows.map(r => { const wd = r.p.status === 'withdrawn'; const pz = wd ? '' : ++prize; return `<tr class="${wd ? 'out' : ''}"><td class="n"><b>${r.tied ? "" : r.rank}</b></td><td class="n">${r.p.no}</td><td><b>${esc(nm(r.p))}</b>${r.p.female ? ' <span class="pill gray">K</span>' : ''}${wd ? ` <span class="pill err">çekildi${r.p.wdFrom ? ' (' + r.p.wdFrom + '. turdan)' : ''}</span>` : ''}</td><td>${esc(r.p.club)}</td><td class="n">${rtg(r.p)}</td><td class="n"><b>${fmt(r.pts)}</b></td>
       ${cols.map(k => `<td class="n">${k === 'avgr' || k === 'avgrc1' ? fmt(r.tb[k], 1) : fmt(r.tb[k])}</td>`).join('')}<td class="n">${pz}</td></tr>`; }).join('')}</table></div>
     <p class="muted" style="margin-top:8px">Eşitlik bozma sırası: ${order.map((k, i) => `${i + 1}) ${E.TB_DEFS[k].name}`).join(' → ')}. Oynanmayan turlar için sanal rakip uygulaması kullanılır; ayarlanmış puanda oynanmayan her tur ½ sayılır.</p></div>`;
   }
@@ -463,11 +463,11 @@
     if (c.system === 'berger') {
       const byNo = rows.slice().sort((a, b) => a.p.no - b.p.no);
       const out = [['Sıra', 'No', 'Ad Soyad', ...byNo.map(r => r.p.no), 'Puan', ...order.map(k => E.TB_DEFS[k].short)]];
-      rows.forEach(r => { const line = [r.rank, r.p.no, nmw(r.p)]; byNo.forEach(cc => { if (cc.p.id === r.p.id) { line.push('■'); return; } line.push(r.hist.filter(x => x.opp === cc.p.id && x.kind !== 'none').map(x => (x.pending ? '' : fmt(x.pts) || '0')).join(' ')); }); line.push(r.pts, ...order.map(k => Math.round(r.tb[k] * 100) / 100)); out.push(line); });
+      rows.forEach(r => { const line = [r.tied ? "" : r.rank, r.p.no, nmw(r.p)]; byNo.forEach(cc => { if (cc.p.id === r.p.id) { line.push('■'); return; } line.push(r.hist.filter(x => x.opp === cc.p.id && x.kind !== 'none').map(x => (x.pending ? '' : fmt(x.pts) || '0')).join(' ')); }); line.push(r.pts, ...order.map(k => Math.round(r.tb[k] * 100) / 100)); out.push(line); });
       return out;
     }
     const out = [['Sıra', 'No', 'Ad Soyad', 'Rtg', ...Array.from({ length: upto }, (_, i) => (i + 1) + '. Tur'), 'Puan', ...order.map(k => E.TB_DEFS[k].short)]];
-    rows.forEach(r => out.push([r.rank, r.p.no, nmw(r.p), rtg(r.p), ...r.hist.slice(0, upto).map(x => cellTxt(x, byId)), r.pts, ...order.map(k => Math.round(r.tb[k] * 100) / 100)]));
+    rows.forEach(r => out.push([r.tied ? "" : r.rank, r.p.no, nmw(r.p), rtg(r.p), ...r.hist.slice(0, upto).map(x => cellTxt(x, byId)), r.pts, ...order.map(k => Math.round(r.tb[k] * 100) / 100)]));
     return out;
   }
   function vCross(tn, c) {

@@ -701,12 +701,14 @@
       const sr = h[idx].pts; const R = h[idx].r;
       return sp + (1 - sr) + 0.5 * (N - R);
     }
+    // Berger: oynanmayan (hükmen) oyunda rakip puanı yerine oyuncunun kendi puanı kullanılır (Swiss-Manager)
+    const isBerg = !!(opts.isBerger || state.system === 'berger');
     // oyuncu için rakip puan dizisi (her tur) ve sonuç dizisi
     const oppVals = new Map();
     for (const p of state.players) {
       const h = hist.get(p.id);
       oppVals.set(p.id, h.map((x, i) => {
-        const v = x.played ? adj.get(x.opp) : virtualOpp(h, i);
+        const v = x.played ? (isBerg ? pts.get(x.opp) : adj.get(x.opp)) : (isBerg ? pts.get(p.id) : virtualOpp(h, i));
         return { v, res: x.pts, played: x.played, opp: x.opp, r: x.r, kind: x.kind };
       }));
     }
@@ -809,6 +811,15 @@
       i = j;
     }
     final.forEach((r, k) => { r.rank = k + 1; });
+    // Tüm eşitlik bozma ölçütleri de eşitse (Swiss-Manager gibi) ortak sıra: r.tied = true, sıra bir öncekiyle aynı
+    const numKeys = (opts.order || []).filter(k => k !== 'direct' && k !== 'directfide');
+    for (let k = 1; k < final.length; k++) {
+      const a = final[k - 1], b = final[k];
+      if (a.pts !== b.pts || !numKeys.every(key => (a.tb && a.tb[key]) === (b.tb && b.tb[key]))) continue;
+      const hh = (x, y) => (hist.get(x.p.id) || []).filter(e => e.played && e.opp === y.p.id).reduce((t, e) => t + e.pts, 0);
+      if (hh(a, b) !== hh(b, a)) continue;
+      b.rank = a.rank; b.tied = true;
+    }
     return final;
   }
 

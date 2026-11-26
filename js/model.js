@@ -60,7 +60,7 @@
 
   /* ------------------------------------------------------------ kategori yardımcıları */
   const n2 = (c) => c.players.length;
-  const stateOf = (c) => ({ players: c.players, rounds: c.rounds, settings: c.settings });
+  const stateOf = (c) => ({ players: c.players, rounds: c.rounds, settings: c.settings, system: c.system });
   const suggest = (c) => R.suggestRounds(n2(c), c.settings.double);
   function sysOf(c) { return c.system || c.sysPref || (n2(c) >= 10 ? 'swiss' : 'berger'); }
   function totalRounds(c) {
