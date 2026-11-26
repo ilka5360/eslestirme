@@ -660,7 +660,7 @@
   const TB_DEFS = {
     direct:   { name: 'Eş puan grubundaki sporcuların sonuçları [11]', short: 'DK' },
     directfide: { name: 'Doğrudan karşılaşma (DE) – tüm eş puanlılar birbiriyle oynamışsa [81]', short: 'DE' },
-    wins:     { name: 'Galibiyet Sayısı (WIN – hükmen galibiyet dahil) [68]', short: 'Gal' },
+    wins:     { name: 'Galibiyet Sayısı (WIN – hükmen galibiyet ve puanlı bye dahil) [68]', short: 'Gal' },
     won:      { name: 'Galibiyet Sayısı (WON – hükmen kazançlar dahil)', short: 'Gal+' },
     aob:      { name: 'Rakiplerin Buchholz Ortalaması (AOB) [77]', short: 'AOB' },
     buch:     { name: 'Buchholz (kesmesiz, sanal rakipli)', short: 'Bh' },
@@ -733,7 +733,7 @@
       let cum = 0, prog = 0;
       h.forEach(x => { cum += x.pts; prog += cum; });
       t.prog = prog;
-      t.wins = h.filter(x => (x.kind === 'game' || x.kind === 'fwin') && x.pts === 1).length;   // Swiss-Manager: hükmen galibiyet de sayılır (17_G, 13_G final listeleri)
+      t.wins = h.filter(x => (x.kind === 'game' || x.kind === 'fwin' || x.kind === 'bye') && x.pts === 1).length;   // Swiss-Manager: hükmen galibiyet de sayılır (17_G, 13_G final listeleri)
       t.won = h.filter(x => (x.kind === 'game' || x.kind === 'fwin') && x.pts === 1).length;
       t.blackwin = h.filter(x => x.kind === 'game' && x.color === 'B' && x.pts === 1).length;
       // Koya: %50 ve üzeri alan rakiplerden alınan puanlar
@@ -826,7 +826,7 @@
   /** Varsayılan eşitlik bozma sıraları (TSF "Eşitlik bozma yöntemleri" belgesindeki öneriye göre). */
   const DEFAULT_TB = {
     swiss:  ['directfide', 'buchc1', 'sb', 'aob', 'wins'], // Swiss-Manager: [11] yalnız tüm eş puanlılar birbiriyle oynamışsa uygulanır (DE) [81] [84] [85] [77] [68]
-    berger: ['direct', 'sb', 'wins'],
+    berger: ['direct', 'sb', 'wins', 'koya'],
   };
 
   const API = {
