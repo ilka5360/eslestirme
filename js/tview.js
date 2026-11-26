@@ -335,7 +335,8 @@
     const hist = E.buildHistory(M.stateOf(c), round - 1);
     const rows = act.map(p => { const h = hist.get(p.id) || [], ci = E.colorInfo(h); return { p, pts: E.totalPoints(h), ci, h }; }).sort((a, b) => b.pts - a.pts || a.p.no - b.p.no);
     const skipN = c.skipNext || {};
-    let h = `<div class="card noprint"><h3>${round}. tur eşlendirmesi ${roundWhen(c, round) ? `<span class="pill">🕘 ${esc(roundWhen(c, round))}</span>` : ''}</h3>`;
+    let h = `<div class="card noprint"><h3>${round}. tur eşlendirmesi ${roundWhen(c, round) ? `<span class="pill">🕘 ${esc(roundWhen(c, round))}</span>` : ''}</h3>
+      <div style="margin:6px 0 10px"><button class="b big" data-act="pair" data-a="${round}">${round}. turu eşleştir</button></div>`;
     if (round === 1) h += `<div class="note info">1. tur: sporcular ortadan ikiye bölünür (S1/S2), çapraz eşlenir. Renk kurası: <b>1 nolu sporcu ${c.settings.initialWhite ? 'beyaz' : 'siyah'}</b> ile başlar (Ayar sekmesinden değiştirilebilir). Tek sayıda sporcu varsa en alttaki sporcu tur atlar.</div>`;
     const ns = M.noShows(c), ex = c.excuse || {};
     h += `<div class="note info">Prosedür md.17(5): <b>dilekçe vermeden</b> son turda hükmen yenik (-/+ , +/-) gelmeyen sporcu <b>çekilmiş sayılır</b> ve bu turdan itibaren eşlendirmeden çıkarılır. Dilekçesi (mazereti) olan sporcuyu aşağıdan işaretleyin; o oynamaya devam eder. Sonradan ayrılan sporcular için Sporcular sekmesindeki <b>“Çekilme”</b> kullanılır.</div>`;
@@ -346,7 +347,7 @@
         <td class="n">${r.ci.seq.length ? (r.ci.cd > 0 ? '+' : '') + r.ci.cd : ''}</td><td>${r.ci.pref ? (r.ci.pref === 'W' ? 'Beyaz' : 'Siyah') + (r.ci.strength === 2 ? ' (mutlak)' : r.ci.strength === 1 ? ' (güçlü)' : '') : ''}</td>
 </tr>`).join('')}</table></div>
       <p class="muted" style="margin:8px 0">Renkler: b = beyaz, s = siyah, B = bye, + / - = hükmen. Rf = renk farkı (beyaz − siyah).</p>
-      <button class="b big" data-act="pair" data-a="${round}">${round}. turu eşleştir</button></div>`;
+    </div>`;
     return h;
   }
   ACT.excuseP = guard((el) => { const c = CAT(); c.excuse = c.excuse || {}; if (c.excuse[el.dataset.a]) delete c.excuse[el.dataset.a]; else c.excuse[el.dataset.a] = true; A.save(); A.render(); });
@@ -367,6 +368,7 @@
       ${c.system === 'swiss' && !rd.pairings.some(p => p.result) && round === c.rounds.length ? `<button class="b sm red" data-act="delRound" data-a="${round}">Bu turu sil / yeniden eşleştir</button>` : ''}
       ${c.system === 'swiss' && done && round === c.rounds.length && round < Rn ? `<button class="b sm" data-act="goR" data-a="${round + 1}">${round + 1}. tur eşlendirmesine geç →</button>` : ''}
       ${done && round === Rn ? '<button class="b sm" data-act="goStand">Sonuçlar →</button>' : ''}</div>
+      ${done && round === Rn ? `<div class="note info noprint">🏁 <b>${allFinished(tn) ? 'Turnuva bitmiştir' : esc(c.name) + ' kategorisi tamamlandı'}.</b> Son tur sonuçları girildi. ${allFinished(tn) && tn.status !== 'arsiv' ? `<button class="b sm" data-act="setSt" data-a="${tn.id}|arsiv">Turnuvayı arşive taşı</button>` : (tn.status === 'arsiv' ? '(arşivde)' : 'Diğer kategoriler sürüyor.')}</div>` : ''}
       <div class="printonly"><b>${esc(tn.info.name)} – ${esc(c.name)}</b> – ${round}. Tur Eşlendirmesi ${esc(roundWhen(c, round) || A.fmtDate(tn.info.date))}</div>
       ${roundWhen(c, round) ? `<div class="pill noprint" style="margin-bottom:8px">🕘 ${esc(roundWhen(c, round))}</div>` : ''}`;
     (rd.notes || []).forEach(n => { h += `<div class="note">${esc(n)}</div>`; });
@@ -394,12 +396,25 @@
 
     return h + `<p class="muted noprint" style="margin-top:10px">Hükmen: <b>+/-</b> beyaz, <b>-/+</b> siyah kazanır; <b>-/-</b> iki oyuncu da gelmedi (0-0). ⇄ ile renkler elle değiştirilebilir (sonuç girilmemişken).</p></div>`;
   }
+  const catFinished = (x) => x.started && x.rounds.length && M.completedRounds(x) >= M.totalRounds(x);
+  const allFinished = (tn) => tn.cats.length > 0 && tn.cats.every(catFinished);
   ACT.res = guard(async (el) => {
     const [r, i, val] = el.dataset.a.split('|'), c = CAT(), pr = c.rounds[r - 1].pairings[+i];
     /* Sonraki tur eşlendirmesi yayınlanmışken (Berger: sonraki turlarda sonuç varken) girilmiş eski sonucu değiştirme/silme onay ister */
     const later = c.system === 'berger' ? c.rounds.slice(+r).some(rd => rd.pairings.some(x => x.result)) : +r < c.rounds.length;
     if (pr.result && later && !(await A.ask(`${r}. turdaki bu sonuç değiştirilecek, ancak sonraki tur(lar) bu sonuca göre ${c.system === 'berger' ? 'oynanmış' : 'eşlendirilmiş'}.\nSıralama ve sonraki tur eşlendirmeleri geçersiz kalabilir. Devam edilsin mi?`, { title: 'Eski sonuç değiştiriliyor', ok: 'Evet, değiştir', danger: true }))) return;
+    const rdd = c.rounds[r - 1], was = rdd.pairings.every(x => x.result);
     M.setResult(c, +r, +i, val); A.save(); A.render();
+    if (!was && rdd.pairings.every(x => x.result)) {
+      /* Tur tamamlandı: otomatik yedek (uygulama içi anlık yedek; Yedek ekranından geri yüklenir) */
+      const ok = await A.snap(`otomatik: ${c.name} ${r}. tur sonuçları tamam`);
+      const { tn } = CT();
+      if (catFinished(c)) {
+        if (allFinished(tn) && tn.status !== 'arsiv') {
+          if (await A.ask(`${c.name} kategorisinin son tur sonuçları girildi ve tüm kategoriler tamamlandı: turnuva bitmiştir.\n\n“${tn.info.name}” arşive taşınsın mı? (Salt okunur olur, istediğiniz zaman geri çıkarabilirsiniz.)`, { title: '🏁 Turnuva bitti', ok: 'Arşive taşı' })) { M.setStatus(tn, 'arsiv'); A.save(); A.toast('Turnuva arşive taşındı'); A.render(); }
+        } else A.toast(`🏁 ${c.name} kategorisi tamamlandı.${ok ? ' Otomatik yedek alındı.' : ''}`, 5000);
+      } else if (ok) A.toast(`${r}. tur sonuçları tamam – otomatik yedek alındı`);
+    }
   });
   ACT.swapC = guard((el) => { const [r, i] = el.dataset.a.split('|'); const pr = CAT().rounds[r - 1].pairings[+i]; if (pr.result) return A.toast('Önce sonucu silin'); [pr.w, pr.b] = [pr.b, pr.w]; A.save(); A.render(); });
   ACT.delRound = guard(async (el) => {

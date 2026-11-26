@@ -58,7 +58,7 @@
       const id = Date.now();
       await idb('eslestirme-snap', 's', 'readwrite', s => s.put({ id, at: id, reason: String(reason || ''), data: JSON.stringify(db) }, id));
       const keys = await idb('eslestirme-snap', 's', 'readonly', s => s.getAllKeys());
-      const old = keys.sort((a, b) => b - a).slice(5);
+      const old = keys.sort((a, b) => b - a).slice(15);
       if (old.length) await idb('eslestirme-snap', 's', 'readwrite', s => { old.forEach(k => s.delete(k)); });
       return true;
     } catch (e) { return false; }
