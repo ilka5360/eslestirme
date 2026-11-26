@@ -381,13 +381,14 @@
         <div class="rs noprint">${bt('1-0', '1-0')}${bt('1/2', '½-½')}${bt('0-1', '0-1')}${bt('+-', '+/-', 'f')}${bt('-+', '-/+', 'f')}${bt('--', '-/-', 'f')}
           <button class="rb f noprint" title="Renkleri değiştir" data-act="swapC" data-a="${round}|${i}" aria-label="Renkleri değiştir">⇄</button></div></div>`;
     });
-    rd.byes.forEach(by => { const p = pById(c, by.p); if (!p) return;       const shown = { '1-0': '1 - 0', '1/2': '½ - ½', '0-1': '0 - 1', '+-': '+ / -', '-+': '- / +', '--': '- / -' }[pr.result] || '–';
-      h += `<div class="bd"><div class="bn">${pr.board}</div>
-        <div class="nm nw"><b><span class="wchip"></span>${esc(nm(w))}</b><small>${w.no} • ${fmt(pts(w))} p ${rtg(w) ? '• ' + rtg(w) : ''}${w.status === 'withdrawn' ? ' • çekildi' : ''}</small></div>
-        <div class="rc ${pr.result ? '' : 'rcnone'}" aria-label="Sonuç">${shown}</div>
-        <div class="nm nk"><b><span class="bchip"></span>${esc(nm(b))}</b><small>${b.no} • ${fmt(pts(b))} p ${rtg(b) ? '• ' + rtg(b) : ''}${b.status === 'withdrawn' ? ' • çekildi' : ''}</small></div>
-        <div class="rs noprint">${bt('1-0', '1-0')}${bt('1/2', '½-½')}${bt('0-1', '0-1')}${bt('+-', '+/-', 'f')}${bt('-+', '-/+', 'f')}${bt('--', '-/-', 'f')}
-          <button class="rb f noprint" title="Renkleri değiştir" data-act="swapC" data-a="${round}|${i}" aria-label="Renkleri değiştir">⇄</button></div></div>`;
+    rd.byes.forEach(by => {
+      const p = pById(c, by.p); if (!p) return;
+      const lbl = by.type === 'bye' ? 'Bye (tur atlıyor)' : by.type === 'half' ? '½ puan (oynamıyor)' : 'Oynamıyor (0 puan)';
+      h += `<div class="bd"><div class="bn">–</div>
+        <div class="nm nw"><b>${esc(nm(p))}</b><small>${p.no} • ${fmt(pts(p))} p ${rtg(p) ? '• ' + rtg(p) : ''}</small></div>
+        <div class="rc">–</div>
+        <div class="nm nk"><span class="muted">${lbl}</span></div>
+        <div class="rs noprint"></div></div>`;
     });
 
     return h + `<p class="muted noprint" style="margin-top:10px">Hükmen: <b>+/-</b> beyaz, <b>-/+</b> siyah kazanır; <b>-/-</b> iki oyuncu da gelmedi (0-0). ⇄ ile renkler elle değiştirilebilir (sonuç girilmemişken).</p></div>`;
