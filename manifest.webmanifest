@@ -1,0 +1,17 @@
+{
+  "name": "Eşleştirme – Satranç Turnuva Yöneticisi",
+  "short_name": "Eşleştirme",
+  "description": "İsviçre ve Berger eşlendirme, eşitlik bozma ve sıralama",
+  "lang": "tr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#14532d",
+  "theme_color": "#14532d",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml"}
+  ]
+}
