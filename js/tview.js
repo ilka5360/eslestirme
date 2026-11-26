@@ -403,7 +403,7 @@
     });
     rd.byes.forEach(by => {
       const p = pById(c, by.p); if (!p) return;
-      const lbl = by.type === 'bye' ? 'Bye (tur atlıyor)' : by.type === 'half' ? '½ puan (oynamıyor)' : 'Oynamıyor (0 puan)';
+      const lbl = by.rest ? 'Dinleniyor (Berger: puan verilmez)' : by.type === 'bye' ? 'Bye (tur atlıyor)' : by.type === 'half' ? '½ puan (oynamıyor)' : 'Oynamıyor (0 puan)';
       h += `<div class="bd"><div class="bn">–</div>
         <div class="nm nw"><b>${esc(nm(p))}</b><small>${p.no} • ${fmt(pts(p))} p ${rtg(p) ? '• ' + rtg(p) : ''}</small></div>
         <div class="rc">–</div>
