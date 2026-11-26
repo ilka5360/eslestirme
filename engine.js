@@ -486,11 +486,16 @@
         feas.forEach((c, idx) => {
           if (c.R.length > 20 && idx >= 2) return;               // büyük bracket'ta yalnız ilk 2 aday (hız)
           const t = targets[idx];
-          if (t !== null && t > bestCost) return;                // aynı bracket için daha pahalı aday: elenir
+          if (t !== null && t > bestCost && !(isLast && k === 1)) return;   // daha pahalı aday elenir (son grupta bye sahibi renkten önce gelir)
           const tryCost = (maxCost, lim) => { for (const pr of genPairings(c.R, c.m, absMode, maxCost, lim || 1500)) return pr; return null; };
           let best = null;
           if (t !== null && t < BIG) {
             best = tryCost(t, 6000);                              // o maliyetteki sözlük sırasındaki ilk eşlendirme
+            if (best && c.m > 0) { // C13/C15: MDP ile eşleşen yerleşik, önceki turda da yukarı float yaptıysa ceza; sözlük sırasındaki ilk 60 çözüm arasından en az cezalı
+              const upOf = (pairs) => { let u = 0; pairs.forEach(([x, y]) => { let r = null; if (mdpSet.has(x) && !mdpSet.has(y)) r = y; else if (mdpSet.has(y) && !mdpSet.has(x)) r = x; if (r) { const q = r.floatSeq, k = q.length; u += (k >= 1 && q[k - 1] === 'U' ? 10 : 0) + (k >= 2 && q[k - 2] === 'U' ? 1 : 0); } }); return u; };
+              let bu = upOf(best.pairs), cnt = 0;
+              if (bu > 0) for (const pr of genPairings(c.R, c.m, absMode, t, 6000)) { if (++cnt > 60) break; const u = upOf(pr.pairs); if (u < bu) { bu = u; best = pr; if (u === 0) break; } }
+            }
             if (!best) { // aday ailesinde yok: ikili arama (üstten sınırlı)
               let hi = c.any.cost, lo = t; best = c.any;
               while (lo < hi && nodes <= budget) { const mid = Math.floor((lo + hi) / 2); const pr = tryCost(mid, 800); if (pr) { best = pr; hi = pr.cost; } else lo = mid + 1; }
@@ -506,12 +511,30 @@
           const part = new Map();
           best.pairs.forEach(([x, y]) => { const i = pos.get(x), j = pos.get(y); part.set(Math.min(i, j), Math.max(i, j)); });
           const seq = [...part.keys()].sort((a2, b2) => a2 - b2).map(k => part.get(k));
-          ranked.push({ c, idx, cost: best.cost, pen: floatPenalty(c.F), pr: best, seq });
+          // S1xS1 (değişim dalı) çiftleri: saf S1/S2 transpozisyonu her zaman önce gelir
+          let ex = 0;
+          { const mdpPaired = new Set();
+            best.pairs.forEach(([x, y]) => { if (mdpSet.has(x) && !mdpSet.has(y)) mdpPaired.add(y); else if (mdpSet.has(y) && !mdpSet.has(x)) mdpPaired.add(x); });
+            const lres = L.filter(x => !mdpSet.has(x) && !mdpPaired.has(x));
+            const rp = best.pairs.filter(([x, y]) => !mdpSet.has(x) && !mdpSet.has(y) && !mdpPaired.has(x) && !mdpPaired.has(y));
+            const s1 = new Set(lres.slice(0, rp.length));
+            // saf transpozisyon: her yerleşik çift bir S1 + bir S2 oyuncusu, aşağı kayan S1'den olmaz
+            rp.forEach(([x, y]) => { if (s1.has(x) === s1.has(y)) ex = 1; });
+            c.F.forEach(f => { if (s1.has(f)) ex = 1; }); }
+          let upen = 0;
+          best.pairs.forEach(([x, y]) => { let r = null; if (mdpSet.has(x) && !mdpSet.has(y)) r = y; else if (mdpSet.has(y) && !mdpSet.has(x)) r = x; if (r) { const q = r.floatSeq, k = q.length; upen += (k >= 1 && q[k - 1] === 'U' ? 10 : 0) + (k >= 2 && q[k - 2] === 'U' ? 1 : 0); } });
+          const mseq = []; { const pos2 = new Map(L.map((x, i) => [x, i]));
+            best.pairs.forEach(([x, y]) => { const mx = mdpSet.has(x), my = mdpSet.has(y); if (mx && !my) mseq.push([pos2.get(x), pos2.get(y)]); else if (my && !mx) mseq.push([pos2.get(y), pos2.get(x)]); });
+            mseq.sort((p, q) => p[0] - q[0]); }
+          ranked.push({ c, mseq: mseq.map(p => p[1]), idx, cost: best.cost, pen: floatPenalty(c.F), upen, pr: best, seq, ex, fp: c.F.map(x => L.indexOf(x)).sort((a2, b2) => b2 - a2) });
         });
         if (nodes > budget) return;
         if (ranked.length) {
+          const cmpFp = (a, b) => { for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) return b[i] - a[i]; return 0; };
           const cmpSeq = (a, b) => { const n = Math.min(a.length, b.length); for (let i = 0; i < n; i++) if (a[i] !== b[i]) return a[i] - b[i]; return a.length - b.length; };
-          ranked.sort((x, y) => x.cost - y.cost || x.pen - y.pen || cmpSeq(x.seq, y.seq) || x.idx - y.idx);
+          const byeK = (x, y) => (isLast && k === 1) ? (x.c.F[0].score - y.c.F[0].score || L.indexOf(y.c.F[0]) - L.indexOf(x.c.F[0])) : 0;
+          const psdK = (x, y) => { const a = x.c.F.map(z => z.score).sort((p, q) => q - p), b = y.c.F.map(z => z.score).sort((p, q) => q - p); for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) return a[i] - b[i]; return 0; };
+          ranked.sort((x, y) => byeK(x, y) || psdK(x, y) || x.cost - y.cost || x.pen - y.pen || x.upen - y.upen || (x.mseq.length === y.mseq.length && x.mseq.length === mdpSet.size ? cmpSeq(x.mseq, y.mseq) : 0) || x.ex - y.ex || cmpSeq(x.seq, y.seq) || x.idx - y.idx);
           const w = ranked[0];
           yield { pairs: w.pr.pairs.concat(w.c.sub.pairs), bye: w.c.sub.bye };
           return;

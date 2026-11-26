@@ -1,4 +1,4 @@
-const V = 'eslestirme-v17';
+const V = 'eslestirme-v18';
 const FILES = ['./', 'index.html', 'style.css', 'app.js', 'engine.js', 'js/rules.js', 'js/model.js', 'js/template.js', 'js/importer.js', 'js/ratingmatch.js', 'js/xlsxout.js', 'js/cards.js', 'js/store.js', 'js/ui.js', 'js/tview.js', 'js/tools.js',
   'vendor/xlsx.min.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => {
