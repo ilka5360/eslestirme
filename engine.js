@@ -480,7 +480,16 @@
           const t = f(full);
           return t === Infinity ? Infinity : t;
         }
-        const targets = feas.map(c => exactMin(c.R, c.m));
+        // Büyük homojen bracket (>20): S1xS2 atama probleminin (Macar) en düşük renk maliyeti
+        function bigMin(R, m) {
+          const n2 = R.length; if (n2 <= 20 || n2 % 2 || m > 0) return null;
+          const h = n2 / 2; const C = [];
+          for (let i = 0; i < h; i++) { const row = []; for (let j = 0; j < h; j++) row.push(pairCost(R[i], R[h + j], absMode)); C.push(row); }
+          const idx = R.slice(0, h).map((_, i) => i);
+          const t = assignMat(C, idx, idx);
+          return (t === Infinity || t >= BIG) ? null : t;
+        }
+        const targets = feas.map(c => { const e = exactMin(c.R, c.m); return e !== null ? e : bigMin(c.R, c.m); });
         let bestCost = Infinity;
         targets.forEach(t => { if (t !== null && t < bestCost) bestCost = t; });
         feas.forEach((c, idx) => {
@@ -494,7 +503,7 @@
             if (best && c.m > 0) { // C13/C15: MDP ile eşleşen yerleşik, önceki turda da yukarı float yaptıysa ceza; sözlük sırasındaki ilk 60 çözüm arasından en az cezalı
               const upOf = (pairs) => { let u = 0; pairs.forEach(([x, y]) => { let r = null; if (mdpSet.has(x) && !mdpSet.has(y)) r = y; else if (mdpSet.has(y) && !mdpSet.has(x)) r = x; if (r) { const q = r.floatSeq, k = q.length; u += (k >= 1 && q[k - 1] === 'U' ? 10 : 0) + (k >= 2 && q[k - 2] === 'U' ? 1 : 0); } }); return u; };
               let bu = upOf(best.pairs), cnt = 0;
-              if (bu > 0) for (const pr of genPairings(c.R, c.m, absMode, t, 6000)) { if (++cnt > 60) break; const u = upOf(pr.pairs); if (u < bu) { bu = u; best = pr; if (u === 0) break; } }
+              if (bu > 0) for (const pr of genPairings(c.R, c.m, absMode, t, 6000)) { if (++cnt > 3000) break; const u = upOf(pr.pairs); if (u < bu) { bu = u; best = pr; if (u === 0) break; } }
             }
             if (!best) { // aday ailesinde yok: ikili arama (üstten sınırlı)
               let hi = c.any.cost, lo = t; best = c.any;
