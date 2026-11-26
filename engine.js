@@ -826,7 +826,7 @@
   /** Varsayılan eşitlik bozma sıraları (TSF "Eşitlik bozma yöntemleri" belgesindeki öneriye göre). */
   const DEFAULT_TB = {
     swiss:  ['directfide', 'buchc1', 'sb', 'aob', 'wins'], // Swiss-Manager: [11] yalnız tüm eş puanlılar birbiriyle oynamışsa uygulanır (DE) [81] [84] [85] [77] [68]
-    berger: ['direct', 'sb', 'wins', 'koya'],
+    berger: ['directfide', 'sb', 'wins'],   // SM: DE [81] → SB [85] → WIN [68]
   };
 
   const API = {
