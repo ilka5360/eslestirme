@@ -158,7 +158,21 @@
     c.started = false; c.rounds = []; c.system = null;
   }
   /** İsviçre: round. turu eşleştirir (motor: E.pairSwiss). */
+  /** Son turda hükmen yenik (gelmedi: -/+ , +/- veya -/-) sonuç alan, 'sadece bu tur' işaretli olmayan aktif sporcular (İsviçre). */
+  function noShows(c) {
+    if (c.system !== 'swiss' || !c.rounds.length) return [];
+    const last = c.rounds[c.rounds.length - 1], out = [];
+    last.pairings.forEach(pr => [[pr.w, '-+'], [pr.b, '+-']].forEach(([id, loss]) => {
+      if ((pr.result === loss || pr.result === '--') && !String(pr.auto || '').startsWith('once:')) {
+        const p = c.players.find(x => x.id === id); if (p && p.status !== 'withdrawn' && !out.includes(p)) out.push(p);
+      }
+    }));
+    return out;
+  }
   function pairRound(c, round) {
+    /* Dilekçe vermeden hükmen yenik gelmeyen sporcu çekilmiş sayılır ve eşlendirmeden çıkarılır; dilekçesi olan (c.excuse) oynamaya devam eder. */
+    const autoWd = noShows(c).filter(p => !(c.excuse && c.excuse[p.id]));
+    autoWd.forEach(p => withdrawPlayer(c, p.id, { mode: 'next', note: 'Son turda hükmen yenik (gelmedi), dilekçe yok' }));
     const skip = Object.keys(c.skipNext || {}).filter(id => { const p = c.players.find(x => x.id === id); return p && p.status !== 'withdrawn' && (p.joinRound || 1) <= round; });
     const rd = { pairings: [], byes: [], skip };
     c.rounds.push(rd);
@@ -167,9 +181,11 @@
       rd.pairings = res.pairs;
       skip.forEach(id => rd.byes.push({ p: id, type: c.skipNext[id] === 'half' ? 'half' : 'zero' }));
       if (res.bye) rd.byes.push({ p: res.bye, type: 'bye' });
-      rd.notes = res.notes; c.skipNext = {};
+      rd.notes = (res.notes || []).slice(); c.skipNext = {}; c.excuse = {};
+      rd.autoWd = autoWd.map(p => p.id);
+      autoWd.forEach(p => rd.notes.push(`${p.ad} ${p.soyad}: son turda hükmen yenik (gelmedi, dilekçe yok) – çekilmiş sayıldı, eşlendirmeye alınmadı.`));
       return res;
-    } catch (e) { c.rounds.pop(); throw e; }
+    } catch (e) { c.rounds.pop(); autoWd.forEach(p => { try { reactivatePlayer(c, p.id); } catch (x) { /* yut */ } }); throw e; }
   }
   function setResult(c, r, i, val) {
     const pr = c.rounds[r - 1].pairings[i];
@@ -185,6 +201,7 @@
     const p = c.players.find(x => x.id === pid);
     if (!p) throw new Error('Sporcu bulunamadı.');
     if (p.status === 'withdrawn') throw new Error('Sporcu zaten turnuvadan çekilmiş.');
+    if (c.system === 'berger') throw new Error('Berger turnuvasında çekilme yoktur.');
     if (!c.started) throw new Error('Turnuva başlamadan sporcu silinebilir; çekilme için önce turnuva başlamalıdır.');
     const mode = o.mode === 'now' ? 'now' : o.mode === 'once' ? 'once' : 'next';
     let wdFrom, forfeited = 0;
@@ -438,7 +455,7 @@
   }
 
   const API = { SCHEMA, ID_RE, uid, clone, emptyDB, newSettings, newCategory, newTournament, newPlayer, shortOf, n2, stateOf, suggest, sysOf, totalRounds, completedRounds,
-    recalcRounds, drawBerger, buildBerger, startCategory, unstartCategory, pairRound, setResult, setRounds, resetRounds, setSystem, renumber, canDelete, canAddPlayer, addPlayers, deletePlayer, withdrawPlayer, reactivatePlayer,
+    recalcRounds, drawBerger, buildBerger, startCategory, unstartCategory, pairRound, noShows, setResult, setRounds, resetRounds, setSystem, renumber, canDelete, canAddPlayer, addPlayers, deletePlayer, withdrawPlayer, noShows, reactivatePlayer,
     categorize, uniqueName, addCategoriesTo, deleteCategory, movePlayer, pullByAge, setStatus, allDone, countPlayers, stripPII, maskTC, migrate, mergeDB, exportBundle, GR_NONE };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.Model = API;
 })(typeof window !== 'undefined' ? window : globalThis);

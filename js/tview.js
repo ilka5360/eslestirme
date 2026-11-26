@@ -132,7 +132,7 @@
       <button class="b" data-act="addP" ${canAdd ? '' : 'disabled'}>+ Sporcu ekle</button>
       <button class="b sec" data-act="fromT" ${canAdd ? '' : 'disabled'}>Başka kategoriden aktar</button>
       <button class="b sec" data-act="print">Yazdır</button></div>
-      <div class="note ${can ? 'info' : ''}">${can ? 'Eşleştirme yapılmadığı için sporcular <b>silinebilir</b>. İlk eşleştirmeden sonra silme kapanır; sporcu “turnuvadan çekilir” (listede kalır, kalan turlarda eşleşmez).' : 'Eşleştirme yapıldı: sporcu silinemez. Ayrılan sporcu için <b>“Çek”</b> kullanın (turnuvadan silinmez, kalan turlarda eşleşmez, ödül almaz).'}</div>
+      <div class="note ${can ? 'info' : ''}">${can ? 'Eşleştirme yapılmadığı için sporcular <b>silinebilir</b>. İlk eşleştirmeden sonra silme kapanır; sporcu “Çekilme” ile turnuvadan çekilir (listede kalır, kalan turlarda eşleşmez).' : 'Eşleştirme yapıldı: sporcu silinemez. Ayrılan sporcu için <b>“Çekilme”</b> kullanın (turnuvadan silinmez, kalan turlarda eşleşmez, ödül almaz).'}</div>
       ${!c.started ? `<div class="note info">Başlangıç sıralaması: <b>kuvvet puanı</b> (UKD/ELO’nun yükseği) → <b>unvan</b> → <b>alfabetik</b>. ${n >= 10 ? '' : 'Berger sisteminde numaralar <b>kura ile</b> verilir (başlatılırken). '}${n && n < 10 ? '<button class="b sm sec" data-act="drawB">Kura çek</button>' : ''}</div>` : ''}
       ${c.started && c.system === 'swiss' && !canAdd ? '<div class="note">Prosedür md.17(3): 2. tur eşlendirmesi duyurulduktan sonra yeni sporcu alınmaz.</div>' : ''}
       ${locked ? '<div class="note">Berger turnuvası başladı; sporcu listesi kilitli (çekilme yapılabilir).</div>' : ''}</div>
@@ -142,7 +142,7 @@
       <td>${wd ? `<span class="pill err">çekildi${p.wdFrom ? ' (' + p.wdFrom + '. turdan)' : ''}</span>` : (p.joinRound > 1 ? '<span class="pill warn">' + p.joinRound + '. turdan</span>' : '<span class="pill">aktif</span>')}</td>
       <td class="noprint act-cell"><button class="b sm sec" data-act="editP" data-a="${p.id}" ${locked ? 'disabled' : ''}>Düzenle</button>
         ${others.length && can ? `<button class="b sm sec" data-act="moveP" data-a="${p.id}">Kategori</button>` : ''}
-        ${wd ? `<button class="b sm sec" data-act="reactP" data-a="${p.id}">Geri al</button>` : (c.started && !can ? `<button class="b sm red" data-act="wdP" data-a="${p.id}">Çek</button>` : '')}
+        ${wd ? `<button class="b sm sec" data-act="reactP" data-a="${p.id}">Geri al</button>` : (c.started && !can && c.system === 'swiss' ? `<button class="b sm red" data-act="wdP" data-a="${p.id}">Çekilme</button>` : '')}
         ${can ? `<button class="b sm red" data-act="delP" data-a="${p.id}">Sil</button>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="11" class="muted">Henüz sporcu eklenmedi. Excel/CSV içe aktarın, tablodan yapıştırın veya tek tek ekleyin.</td></tr>'}
     </table></div></div>`;
   }
@@ -191,13 +191,13 @@
     const onceTxt = pending ? `Sadece bu tur (${rn}. tur): bu turdaki eşleşme sporcu aleyhine hükmen sayılır; sonraki turlarda oynamaya devam eder` : `Sadece bu tur (${rn}. tur): ${rn}. turda eşleşmez (0 puan), sonraki turlarda oynamaya devam eder`;
     const nowTxt = pending ? `Bu tur ve sonraki turlar (${rn}. turdan itibaren): bu turdaki eşleşme hükmen, sonraki turlarda eşleşmez (turnuvadan çekilir)` : `Bu tur ve sonraki turlar (${rn}. turdan itibaren): ${rn}. turdan itibaren eşleşmez (turnuvadan çekilir)`;
     const tn = TN(); const elsewhere = tn.cats.filter(x => x !== c && x.started && x.players.some(q => q.kisiId === p.kisiId && q.status === 'active'));
-    A.dialog(`<h3>${esc(nm(p))} – turnuvadan çek</h3>
+    A.dialog(`<h3>${esc(nm(p))} – Çekilme</h3>
       <label class="chk ${canOnce ? '' : 'dis'}"><input type="radio" name="wd" value="once" ${canOnce ? 'checked' : 'disabled'}> ${esc(onceTxt)}</label>
       <label class="chk"><input type="radio" name="wd" value="now" ${canOnce ? '' : 'checked'}> ${esc(nowTxt)}</label>
       <label style="margin-top:8px">Neden (isteğe bağlı)</label><input id="wd_note" maxlength="150" placeholder="Örn. hastalık, ayrıldı">
       ${elsewhere.length ? `<label class="chk" style="margin-top:8px"><input type="checkbox" id="wd_other"> Başka kategorilerden de çek (${esc(elsewhere.map(x => x.name).join(', '))})</label>` : ''}
       <div class="note info" style="margin-top:8px">“Bu tur ve sonraki turlar”da sporcu listede ve sıralamada kalır, kalan turlarda eşleşmez, ödül sırası almaz (md.19/3). “Geri al” ile yeniden alınabilir.</div>
-      <div class="row tight"><button class="b red" id="ok">Çek</button><button class="b sec" data-close>Vazgeç</button></div>`, d => {
+      <div class="row tight"><button class="b red" id="ok">Çekilme</button><button class="b sec" data-close>Vazgeç</button></div>`, d => {
       $('#ok', d).onclick = async () => {
         const mode = $('input[name=wd]:checked', d).value, note = $('#wd_note', d).value;
         try {
@@ -332,24 +332,24 @@
     const Rn = M.totalRounds(c);
     if (round > Rn) return '<div class="card">Tüm turlar tamamlandı.</div>';
     const act = c.players.filter(p => p.status !== 'withdrawn' && (p.joinRound || 1) <= round);
-    const warn = round > 1 ? warnings(c, round) : [];
     const hist = E.buildHistory(M.stateOf(c), round - 1);
     const rows = act.map(p => { const h = hist.get(p.id) || [], ci = E.colorInfo(h); return { p, pts: E.totalPoints(h), ci, h }; }).sort((a, b) => b.pts - a.pts || a.p.no - b.p.no);
     const skipN = c.skipNext || {};
     let h = `<div class="card noprint"><h3>${round}. tur eşlendirmesi ${roundWhen(c, round) ? `<span class="pill">🕘 ${esc(roundWhen(c, round))}</span>` : ''}</h3>`;
     if (round === 1) h += `<div class="note info">1. tur: sporcular ortadan ikiye bölünür (S1/S2), çapraz eşlenir. Renk kurası: <b>1 nolu sporcu ${c.settings.initialWhite ? 'beyaz' : 'siyah'}</b> ile başlar (Ayar sekmesinden değiştirilebilir). Tek sayıda sporcu varsa en alttaki sporcu tur atlar.</div>`;
-    if (warn.length) h += `<div class="note">Prosedür md.17(5): mazeretsiz bir tura veya nedeni ne olursa olsun iki tura katılmayan sporcu eşlendirmeden çıkarılır.<br>${warn.map(w => `<b>${esc(nm(w.p))}</b> – ${esc(w.why)} <button class="b sm red" data-act="wdP2" data-a="${w.p.id}">Çek</button>`).join('<br>')}</div>`;
-    h += `<div class="note info">Bu tur oynamayacağı önceden bildirilen sporcuları işaretleyin (eşlendirmeye alınmaz; puan: <b>0</b>, yarım bye seçilirse ½).</div>
-      <div class="tblw"><table><tr><th class="n">Sıra</th><th class="n">No</th><th>Sporcu</th><th class="n">Puan</th><th>Renkler</th><th class="n">Rf</th><th>Tercih</th><th>Bu tur</th></tr>
+    const ns = M.noShows(c), ex = c.excuse || {};
+    h += `<div class="note info">Prosedür md.17(5): <b>dilekçe vermeden</b> son turda hükmen yenik (-/+ , +/-) gelmeyen sporcu <b>çekilmiş sayılır</b> ve bu turdan itibaren eşlendirmeden çıkarılır. Dilekçesi (mazereti) olan sporcuyu aşağıdan işaretleyin; o oynamaya devam eder. Sonradan ayrılan sporcular için Sporcular sekmesindeki <b>“Çekilme”</b> kullanılır.</div>`;
+    if (ns.length) h += `<div class="note">${ns.map(p => `<div style="margin:3px 0"><b>${esc(nm(p))}</b> – son turda hükmen yenik (gelmedi): ${ex[p.id] ? '<b>dilekçesi var → eşlendirmeye alınacak</b>' : '<b>dilekçe yok → çekilmiş sayılıp eşlendirmeden çıkarılacak</b>'} <button class="b sm ${ex[p.id] ? 'sec' : ''}" data-act="excuseP" data-a="${p.id}">${ex[p.id] ? 'Dilekçeyi kaldır' : 'Dilekçesi var'}</button></div>`).join('')}</div>`;
+    h += `<div class="tblw"><table><tr><th class="n">Sıra</th><th class="n">No</th><th>Sporcu</th><th class="n">Puan</th><th>Renkler</th><th class="n">Rf</th><th>Tercih</th></tr>
       ${rows.map((r, i) => `<tr><td class="n">${i + 1}</td><td class="n">${r.p.no}</td><td>${esc(nm(r.p))}</td><td class="n">${fmt(r.pts)}</td>
         <td>${r.h.map(x => x.played ? (x.color === 'W' ? 'b' : 's') : (x.kind === 'bye' ? 'B' : x.kind === 'fwin' ? '+' : x.kind === 'floss' ? '-' : '·')).join(' ') || '–'}</td>
         <td class="n">${r.ci.seq.length ? (r.ci.cd > 0 ? '+' : '') + r.ci.cd : ''}</td><td>${r.ci.pref ? (r.ci.pref === 'W' ? 'Beyaz' : 'Siyah') + (r.ci.strength === 2 ? ' (mutlak)' : r.ci.strength === 1 ? ' (güçlü)' : '') : ''}</td>
-        <td><select data-act="skipN" data-a="${r.p.id}" style="width:auto;padding:4px"><option value="">oynar</option><option value="zero" ${skipN[r.p.id] === 'zero' ? 'selected' : ''}>oynamaz (0)</option><option value="half" ${skipN[r.p.id] === 'half' ? 'selected' : ''}>oynamaz (½)</option></select></td></tr>`).join('')}</table></div>
+</tr>`).join('')}</table></div>
       <p class="muted" style="margin:8px 0">Renkler: b = beyaz, s = siyah, B = bye, + / - = hükmen. Rf = renk farkı (beyaz − siyah).</p>
       <button class="b big" data-act="pair" data-a="${round}">${round}. turu eşleştir</button></div>`;
     return h;
   }
-  ACT.skipN = guard((el) => { const c = CAT(); c.skipNext = c.skipNext || {}; if (el.value) c.skipNext[el.dataset.a] = el.value; else delete c.skipNext[el.dataset.a]; A.save(); });
+  ACT.excuseP = guard((el) => { const c = CAT(); c.excuse = c.excuse || {}; if (c.excuse[el.dataset.a]) delete c.excuse[el.dataset.a]; else c.excuse[el.dataset.a] = true; A.save(); A.render(); });
   ACT.pair = guard((el) => {
     const c = CAT(), round = +el.dataset.a;
     el.disabled = true; el.textContent = 'Eşleştiriliyor…';
@@ -470,7 +470,7 @@
   function vHelp() {
     return `<div class="card help"><h2>Uygulanan kurallar</h2>
     <h3>Sistem ve tur sayısı</h3><p>Her kategori kendi sistemi ve tur sayısıyla oynanır. <b>3-9 sporcu: Berger</b> (n-1 tur, tek sayıda n tur; çift devre ×2). <b>10-32 sporcu: İsviçre 5 tur</b>, <b>33-64: 6 tur</b>, <b>65-128: 7 tur</b>. 129 ve üzeri için öneri yoktur, tur sayısını hakem girer. Öneriyi hakem değiştirebilir (etiket “Elle”); “Öneriye dön” ile geri alınır. Sistem ve tur sayısı teknik toplantıda belirlenir ve kategori başlatıldıktan sonra değişmez (Prosedür md.17/4). Kayıt kontrolünden sonra 3’ten az sporcusu olan kategori oluşmamış sayılır (md.13/7).</p>
-    <h3>Silme ve çekilme</h3><p>Eşleştirme yapılmadan sporcu <b>silinebilir</b>. İlk eşleştirmeden sonra silinemez; ayrılan sporcu <b>çekilir</b>: listede ve sıralamada kalır, kalan turlarda eşleşmez, ödül sırası almaz (md.19/3). Çekilirken iki seçenek vardır: <b>“Sadece bu tur”</b> (bu turdaki eşleşme hükmen sayılır, sporcu sonraki turlarda oynar) ve <b>“Bu tur ve sonraki turlar”</b> (bu turdaki eşleşme hükmen sayılır, sporcu çekilir). Berger’de kalan tüm sonuçsuz oyunlar hükmen yenik olur (FIDE’nin %50 kuralı uygulanmaz; hakem kararıdır).</p>
+    <h3>Silme ve çekilme</h3><p>Eşleştirme yapılmadan sporcu <b>silinebilir</b>. İlk eşleştirmeden sonra silinemez; ayrılan sporcu <b>çekilir</b>: listede ve sıralamada kalır, kalan turlarda eşleşmez, ödül sırası almaz (md.19/3). Çekilme yalnızca <b>İsviçre</b> sistemindedir ve <b>Sporcular</b> sekmesindeki <b>“Çekilme”</b> düğmesiyle yapılır (önceki turun sonuçları tamamlanmış, sıradaki tur henüz eşlenmemiş olmalıdır). İki seçenek vardır: <b>“Sadece bu tur”</b> (sporcu yalnız sıradaki turu atlar, 0 puan; sonra oynamaya devam eder) ve <b>“Bu tur ve sonraki turlar”</b> (sporcu turnuvadan çekilir). <b>Dilekçe vermeden</b> son turda hükmen yenik (-/+) gelmeyen sporcu otomatik çekilmiş sayılır ve sonraki turlarda eşlendirmeden çıkarılır; dilekçesi olanı eşlendirme ekranında işaretleyin. <b>Berger</b>’de çekilme yoktur.</p>
     <h3>Başlangıç sıralaması</h3><p>Kuvvet puanı (UKD ve ELO’dan yüksek olan) → unvan (GM, IM, WGM, FM, WIM, CM, WFM, WCM) → alfabetik (soyad). Berger’de numaralar kura ile verilir.</p>
     <h3>İsviçre eşlendirmesi (FIDE Dutch ilkeleri)</h3><ul>
     <li>Aynı iki sporcu birden fazla kez eşlenmez.</li><li>Oynamadan puan alan (bye, hükmen kazanç, yarım bye) sporcu tur atlayamaz.</li>
@@ -478,7 +478,7 @@
     <li>Eşlendirme en üst puan grubundan başlar; gruplar ortadan bölünür (S1/S2). Eşleşme olmazsa önce S2’de yer değiştirme, sonra S1–S2 değiş-tokuşu denenir; olmazsa en alttaki sporcu bir alt gruba kayar.</li>
     <li>Tek sayıda sporcuda en düşük puan grubunun en alttaki uygun sporcusu tur atlar (bye).</li>
     <li>Masalar: üstteki sporcunun puanı → çiftin toplam puanı → üstteki sporcunun başlangıç numarası.</li>
-    <li>Mazeretsiz 1 tura veya nedeni ne olursa olsun 2 tura katılmayan sporcu eşlendirmeden çıkarılır (md.17/5) – program uyarır, kararı hakem verir.</li>
+    <li>Dilekçe vermeden hükmen yenik (gelmedi) sonuçlu sporcu çekilmiş sayılır ve sonraki turlarda eşlendirmeden çıkarılır (md.17/5); dilekçeli sporcu eşlendirme ekranında işaretlenir.</li>
     <li>Geç gelenler: 1. tur başlamadan listeye girer; 1. tur başladıktan sonra gelenler 2. turdan itibaren alınır (md.17/2-3).</li></ul>
     <h3>Berger</h3><p>Dokümandaki Berger tablolarıyla birebir uyumludur (3–10 sporcu kontrol edildi). Tek sayıda sporcuda “dinlenen” tur 0 puandır. İsterseniz çift devre seçilir (2. devrede renkler ters).</p>
     <h3>Eşitlik bozma</h3><p>Sıra “Ayar” sekmesinden kategori başına ayarlanır. Varsayılan sıralar “Eşitlik bozma yöntemleri” belgesindeki öneriye göredir: <b>Berger:</b> Doğrudan karşılaşma → Sonneborn-Berger → Galibiyet sayısı → Koya. <b>İsviçre (Swiss-Manager varsayılanı):</b> Eş puan grubundaki sonuçlar → Buchholz alttan −1 → Sonneborn-Berger → Rakiplerin Buchholz ortalaması → Galibiyet sayısı.</p>
