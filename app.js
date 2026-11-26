@@ -4,6 +4,7 @@
   const A = window.App, { $, $$, esc, ACT, fmt, fmtDate } = A;
   const M = window.Model, S = window.Store, R = window.Rules, I = window.Importer, E = window.Engine;
   A.M = M; A.S = S; A.E = E;
+  A.VERSION = { no: 15, date: '26.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
 
   /* ------------------------------------------------------------- veri */
   const boot = S.load();
@@ -105,6 +106,7 @@
     let h = `<section class="hero"><div class="heroin"><div class="pieces" aria-hidden="true">${['p-king', 'p-queen', 'p-rook', 'p-bishop', 'p-knight', 'p-pawn'].map(piece).join('')}</div>
       <h1>Eşleştirme</h1><p>Satranç turnuvaları için İsviçre ve Berger eşlendirme, kayıt kontrol, yaka ve masa kartları.</p>
       <div class="row tight"><a class="b big" href="#/yeni">♟ Yeni turnuva</a><button class="b sec big" data-act="impBackup">Yedekten yükle</button></div></div></section>
+      <p class="muted ver" style="text-align:right;margin:4px 2px 0;font-size:12px">Sürüm v${A.VERSION.no} • ${A.VERSION.date}</p>
       <div class="stats"><div><b>${act.length}</b><small>Aktif turnuva</small></div><div><b>${pl}</b><small>Sporcu</small></div><div><b>${kc}</b><small>Kategori</small></div><div><b>${arch.length}</b><small>Arşiv</small></div></div>`;
     if (need) h += `<div class="note bn"><span>${DB.lastBackup ? 'Son yedek: ' + A.ago(DB.lastBackup) + ' ve sonrasında değişiklik yapıldı.' : 'Henüz yedek almadınız.'} Tarayıcı verisi silinirse turnuvalar kaybolur.</span><button class="b sm" data-act="backup">Yedek al</button></div>`;
     if (wizHasData() && (W.raw.length || W.manual.length || W.step > 1)) h += `<div class="note info bn"><span><b>Yarım kalan turnuva:</b> “${esc(W.info.name || 'adsız')}” (${W.raw.length + W.manual.length} sporcu, ${W.step}. adım)</span><span class="row tight"><a class="b sm" href="#/yeni">Devam et</a><button class="b sm sec" data-act="wiDrop">Sil</button></span></div>`;

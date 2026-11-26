@@ -70,7 +70,7 @@
       for (let i = 0; i < ps.length + st.blank; i++) { const p = ps[i], r = body.insertRow(); [i + 1, p ? p.ad : '', p ? p.soyad : '', p ? p.club : '', p && st.phone ? telFmt(p.tel) : '', ''].forEach(x => { r.insertCell().textContent = x; }); }
       sec.appendChild(tb); root.appendChild(sec);
     });
-    A.setPrint(root); setTimeout(() => window.print(), 50);
+    A.setPrint(root); A.doPrint();
   };
   A.tools.prepareKK = () => { ACT.kkPrint = ACT.kkPrint; };
   ACT.kkPhoneFile = guard(async (el) => {
@@ -167,7 +167,7 @@
     await Promise.all([...root.querySelectorAll('img')].map(im => (im.decode ? im.decode().catch(() => {}) : Promise.resolve())));
     return chunks.length;
   };
-  ACT.kcPrint = async () => { A.toast('Sayfalar hazırlanıyor…', 1500); const n = await A.tools.prepareCards(); if (n) setTimeout(() => window.print(), 100); };
+  ACT.kcPrint = async () => { A.toast('Sayfalar hazırlanıyor…', 1500); const n = await A.tools.prepareCards(); if (n) A.doPrint(); };
   const cardsSave = (tn, st) => { tn.card.yaka = { layout: st.layout, dx: st.dx, dy: st.dy, marks: st.marks }; tn.card.masa = { dashZero: st.dashZero }; A.save({ clean: true }); };
   ACT.kcTab = (el) => { const { tn } = A.ctx(); const st = kc(tn); st.tab = el.dataset.a; st.page = 0; A.render(); };
   ACT.kcCat = (el) => { const { tn } = A.ctx(), st = kc(tn); const s = st.cats || new Set(tn.cats.map(c => c.id)); if (el.checked) s.add(el.dataset.a); else s.delete(el.dataset.a); st.cats = s; st.page = 0; A.render(); };

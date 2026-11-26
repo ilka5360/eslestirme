@@ -20,7 +20,7 @@
   const onlyDone = () => { const { tn } = CT(); return tn; };
   ACT.goR = (el) => { rv[CAT().id] = +el.dataset.a; A.render(); };
   ACT.goStand = () => { const { tn, cat } = CT(); A.go(A.tnPath(tn, cat.id, 'stand')); };
-  ACT.print = () => window.print();
+  ACT.print = () => A.doPrint();
 
   /* ============================================================= AYAR */
   function sched(c) { if (!c.schedule) c.schedule = { rounds: [], kayit: { d: '', t: '', t2: '' }, teknik: { d: '', t: '' }, odul: { d: '', t: '' } }; return c.schedule; }
@@ -183,6 +183,7 @@
   function wdDialog(c, p, o) {
     o = o || {};
     const berger = c.system === 'berger', last = c.rounds[c.rounds.length - 1];
+    if (!berger && last && last.pairings.some(x => !x.result)) return A.toast(`${c.rounds.length}. tur eşlendi ama sonuçlar tamamlanmadı: çekilme için önce ${c.rounds.length}. turun tüm sonuçlarını girin (eşlendirme yanlışsa turu silin).`, 6000);
     const cr = M.completedRounds(c);
     const pr = berger ? (c.rounds[cr] && c.rounds[cr].pairings.find(x => (x.w === p.id || x.b === p.id) && !x.result)) : (last && last.pairings.find(x => (x.w === p.id || x.b === p.id) && !x.result));
     const pending = !!pr, rn = berger ? cr + 1 : (pending ? c.rounds.length : c.rounds.length + 1);
@@ -393,7 +394,13 @@
 
     return h + `<p class="muted noprint" style="margin-top:10px">Hükmen: <b>+/-</b> beyaz, <b>-/+</b> siyah kazanır; <b>-/-</b> iki oyuncu da gelmedi (0-0). ⇄ ile renkler elle değiştirilebilir (sonuç girilmemişken).</p></div>`;
   }
-  ACT.res = guard((el) => { const [r, i, val] = el.dataset.a.split('|'); M.setResult(CAT(), +r, +i, val); A.save(); A.render(); });
+  ACT.res = guard(async (el) => {
+    const [r, i, val] = el.dataset.a.split('|'), c = CAT(), pr = c.rounds[r - 1].pairings[+i];
+    /* Sonraki tur eşlendirmesi yayınlanmışken (Berger: sonraki turlarda sonuç varken) girilmiş eski sonucu değiştirme/silme onay ister */
+    const later = c.system === 'berger' ? c.rounds.slice(+r).some(rd => rd.pairings.some(x => x.result)) : +r < c.rounds.length;
+    if (pr.result && later && !(await A.ask(`${r}. turdaki bu sonuç değiştirilecek, ancak sonraki tur(lar) bu sonuca göre ${c.system === 'berger' ? 'oynanmış' : 'eşlendirilmiş'}.\nSıralama ve sonraki tur eşlendirmeleri geçersiz kalabilir. Devam edilsin mi?`, { title: 'Eski sonuç değiştiriliyor', ok: 'Evet, değiştir', danger: true }))) return;
+    M.setResult(c, +r, +i, val); A.save(); A.render();
+  });
   ACT.swapC = guard((el) => { const [r, i] = el.dataset.a.split('|'); const pr = CAT().rounds[r - 1].pairings[+i]; if (pr.result) return A.toast('Önce sonucu silin'); [pr.w, pr.b] = [pr.b, pr.w]; A.save(); A.render(); });
   ACT.delRound = guard(async (el) => {
     const c = CAT(); if (!(await A.ask('Bu turun eşlendirmesi silinsin mi?', { ok: 'Sil', danger: true }))) return;
