@@ -532,7 +532,7 @@
         if (ranked.length) {
           const cmpFp = (a, b) => { for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) return b[i] - a[i]; return 0; };
           const cmpSeq = (a, b) => { const n = Math.min(a.length, b.length); for (let i = 0; i < n; i++) if (a[i] !== b[i]) return a[i] - b[i]; return a.length - b.length; };
-          const byeK = (x, y) => (isLast && k === 1) ? (x.c.F[0].score - y.c.F[0].score || L.indexOf(y.c.F[0]) - L.indexOf(x.c.F[0])) : 0;
+          const byeK = (x, y) => (isLast && k === 1) ? (x.c.F[0].score - y.c.F[0].score) : 0;
           const psdK = (x, y) => { const a = x.c.F.map(z => z.score).sort((p, q) => q - p), b = y.c.F.map(z => z.score).sort((p, q) => q - p); for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) return a[i] - b[i]; return 0; };
           ranked.sort((x, y) => byeK(x, y) || psdK(x, y) || x.cost - y.cost || x.pen - y.pen || x.upen - y.upen || (x.mseq.length === y.mseq.length && x.mseq.length === mdpSet.size ? cmpSeq(x.mseq, y.mseq) : 0) || x.ex - y.ex || cmpSeq(x.seq, y.seq) || x.idx - y.idx);
           const w = ranked[0];
@@ -558,7 +558,7 @@
     const initW = opts.initialWhite !== false;
     const out = [];
     sol.pairs.forEach(([a, b]) => {
-      let hi = a.no < b.no ? a : b, lo = hi === a ? b : a;       // hi: sıralamada üstteki (küçük no)
+      let hi = (a.score !== b.score ? a.score > b.score : a.no < b.no) ? a : b, lo = hi === a ? b : a;       // hi: sıralamada üstteki (önce puan, sonra küçük no)
       let w, bl;
       if (firstRound) {
         // pair index'e göre değil, S1'in sırasına göre: üstteki oyuncunun sırası tek ise ilk renk
@@ -574,7 +574,7 @@
     // masa sırası: üstteki oyuncunun puanı, toplam puan, üstteki oyuncunun no'su
     out.sort((x, y) => {
       const xs = Math.max(x._hi.score, x._lo.score), ys = Math.max(y._hi.score, y._lo.score);
-      return ys - xs || (y._hi.score + y._lo.score) - (x._hi.score + x._lo.score) || x._hi.no - y._hi.no;
+      return ys - xs || (y._hi.score + y._lo.score) - (x._hi.score + x._lo.score) || Math.min(x._hi.no, x._lo.no) - Math.min(y._hi.no, y._lo.no);
     });
     const pairs = out.map((o, i) => ({ board: i + 1, w: o.w, b: o.b, result: null }));
     return { pairs, bye: sol.bye ? sol.bye.p.id : null, notes, relaxedLevel: usedLevel };
