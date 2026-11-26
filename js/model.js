@@ -191,6 +191,10 @@
     if (mode === 'once') {   // yalnız bu tur: bu turdaki sonuçsuz eşleşme hükmen, sporcu aktif kalır
       const rd = c.system === 'berger' ? c.rounds[completedRounds(c)] : c.rounds[c.rounds.length - 1];
       const pr = rd && rd.pairings.find(x => (x.w === pid || x.b === pid) && !x.result);
+      if (!pr && c.system !== 'berger') {   // sonuçlar tamam, sıradaki tur henüz eşlenmedi: sporcu yalnız sıradaki turu atlar
+        c.skipNext = c.skipNext || {}; c.skipNext[pid] = c.settings.byePoints == 0.5 ? 'half' : 'zero';
+        return { wdFrom: c.rounds.length + 1, forfeited: 0, once: true, skipped: true };
+      }
       if (!pr) throw new Error('Bu turda sonuçsuz eşleşmesi yok.');
       pr.result = FORFEIT_LOSS(pr.w === pid); pr.auto = 'once:' + pid;
       return { wdFrom: c.rounds.indexOf(rd) + 1, forfeited: 1, once: true };
@@ -208,9 +212,8 @@
     } else {
       const last = c.rounds[c.rounds.length - 1];
       if (mode === 'now' && last) {
-        const pr = last.pairings.find(x => x.w === pid || x.b === pid);
+        const pr = last.pairings.find(x => (x.w === pid || x.b === pid) && !x.result);
         if (pr) {
-          if (pr.result) throw new Error('Bu turdaki eşleşmenin sonucu girilmiş; "sonraki turdan itibaren" seçeneğini kullanın.');
           pr.result = FORFEIT_LOSS(pr.w === pid); pr.auto = 'wd:' + pid; forfeited++;
           wdFrom = c.rounds.length;
         } else wdFrom = c.rounds.length + 1;

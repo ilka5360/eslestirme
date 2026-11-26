@@ -185,14 +185,14 @@
     const berger = c.system === 'berger', last = c.rounds[c.rounds.length - 1];
     const cr = M.completedRounds(c);
     const pr = berger ? (c.rounds[cr] && c.rounds[cr].pairings.find(x => (x.w === p.id || x.b === p.id) && !x.result)) : (last && last.pairings.find(x => (x.w === p.id || x.b === p.id) && !x.result));
-    const canNow = !!pr, rn = berger ? cr + 1 : c.rounds.length;
-    const onceTxt = `Sadece bu tur (${rn}. tur): bu turdaki eşleşme sporcu aleyhine hükmen sayılır; sonraki turlarda oynamaya devam eder`;
-    const nowTxt = `Bu tur ve sonraki turlar (${rn}. turdan itibaren): bu turdaki eşleşme hükmen, sonraki turlarda eşleşmez (turnuvadan çekilir)`;
+    const pending = !!pr, rn = berger ? cr + 1 : (pending ? c.rounds.length : c.rounds.length + 1);
+    const canOnce = pending || !berger;
+    const onceTxt = pending ? `Sadece bu tur (${rn}. tur): bu turdaki eşleşme sporcu aleyhine hükmen sayılır; sonraki turlarda oynamaya devam eder` : `Sadece bu tur (${rn}. tur): ${rn}. turda eşleşmez (0 puan), sonraki turlarda oynamaya devam eder`;
+    const nowTxt = pending ? `Bu tur ve sonraki turlar (${rn}. turdan itibaren): bu turdaki eşleşme hükmen, sonraki turlarda eşleşmez (turnuvadan çekilir)` : `Bu tur ve sonraki turlar (${rn}. turdan itibaren): ${rn}. turdan itibaren eşleşmez (turnuvadan çekilir)`;
     const tn = TN(); const elsewhere = tn.cats.filter(x => x !== c && x.started && x.players.some(q => q.kisiId === p.kisiId && q.status === 'active'));
     A.dialog(`<h3>${esc(nm(p))} – turnuvadan çek</h3>
-      <label class="chk ${canNow ? '' : 'dis'}"><input type="radio" name="wd" value="once" ${canNow ? 'checked' : 'disabled'}> ${esc(onceTxt)}</label>
-      <label class="chk ${canNow ? '' : 'dis'}"><input type="radio" name="wd" value="now" ${canNow ? '' : 'disabled'}> ${esc(nowTxt)}</label>
-      ${canNow ? '' : '<div class="note">Bu turda sonuçsuz eşleşme yok; çekilme için sonuç girilmemiş bir eşleşme gerekir.</div>'}
+      <label class="chk ${canOnce ? '' : 'dis'}"><input type="radio" name="wd" value="once" ${canOnce ? 'checked' : 'disabled'}> ${esc(onceTxt)}</label>
+      <label class="chk"><input type="radio" name="wd" value="now" ${canOnce ? '' : 'checked'}> ${esc(nowTxt)}</label>
       <label style="margin-top:8px">Neden (isteğe bağlı)</label><input id="wd_note" maxlength="150" placeholder="Örn. hastalık, ayrıldı">
       ${elsewhere.length ? `<label class="chk" style="margin-top:8px"><input type="checkbox" id="wd_other"> Başka kategorilerden de çek (${esc(elsewhere.map(x => x.name).join(', '))})</label>` : ''}
       <div class="note info" style="margin-top:8px">“Bu tur ve sonraki turlar”da sporcu listede ve sıralamada kalır, kalan turlarda eşleşmez, ödül sırası almaz (md.19/3). “Geri al” ile yeniden alınabilir.</div>
@@ -202,7 +202,7 @@
         try {
           await A.snap('çekilme'); const r = M.withdrawPlayer(c, p.id, { mode, note });
           if ($('#wd_other', d) && $('#wd_other', d).checked) elsewhere.forEach(x => { const q = x.players.find(z => z.kisiId === p.kisiId); try { M.withdrawPlayer(x, q.id, { mode, note }); } catch (e) { /* o kategoride çekilemiyorsa atla */ } });
-          A.save(); d.close(); A.toast(r.once ? `Yalnız ${r.wdFrom}. tur için hükmen işlendi` : `Çekildi (${r.wdFrom}. turdan itibaren${r.forfeited ? ', ' + r.forfeited + ' oyun hükmen' : ''})`); A.render();
+          A.save(); d.close(); A.toast(r.once ? (r.skipped ? `${r.wdFrom}. turda eşleşmeyecek` : `Yalnız ${r.wdFrom}. tur için hükmen işlendi`) : `Çekildi (${r.wdFrom}. turdan itibaren${r.forfeited ? ', ' + r.forfeited + ' oyun hükmen' : ''})`); A.render();
         } catch (e) { A.toast(e.message, 5000); }
       };
     });
