@@ -49,10 +49,10 @@
   function buildResults(X, o) {
     const defs = o.defs, order = o.order.filter(k => k !== 'direct' && k !== 'directfide' && defs[k]);
     let pz = 0;
-    const head = ['Sıra', 'No', 'Ad Soyad', 'Unvan', 'Fed', 'Kulüp', 'Puan', ...order.map(k => defs[k].short), 'Ödül sırası', 'Durum'];
+    const head = ['Sıra', 'B.No', 'Ad Soyad', 'Unvan', 'Fed', 'Kulüp', 'Puan', ...order.map(k => defs[k].short), 'Ödül sırası', 'Durum'];
     const aoa = [head].concat(o.rows.map(r => {
       const wd = r.p.status === 'withdrawn';
-      return [r.tied ? "" : r.rank, r.p.no, o.nm(r.p), r.p.title, r.p.fed, r.p.club, r.pts, ...order.map(k => (typeof r.tb[k] === 'number' ? Math.round(r.tb[k] * 100) / 100 : '')), wd ? '' : ++pz, wd ? 'çekildi' : ''].map(cell);
+      return [r.tied ? "" : r.rank, r.p.no, o.nm(r.p), r.p.title, r.p.fed, (o.clubMax ? String(r.p.club || '').slice(0, o.clubMax) : r.p.club), r.pts, ...order.map(k => (typeof r.tb[k] === 'number' ? Math.round(r.tb[k] * 100) / 100 : '')), wd ? '' : ++pz, wd ? 'çekildi' : ''].map(cell);
     }));
     const wb = X.utils.book_new();
     X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet(aoa), 'Sıralama');

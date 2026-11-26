@@ -7,7 +7,8 @@
   const CAT = () => A.ctx().cat;
   const TN = () => A.ctx().tn;
   const nm = (p) => (p ? `${p.ad} ${p.soyad}`.trim() : '—');
-  const nmw = (p) => nm(p) + (p.status === 'withdrawn' ? ' (çekildi' + (p.wdFrom ? ', ' + p.wdFrom + '. turdan' : '') + ')' : '');
+  const nmt = (p) => (p && p.title ? p.title + ' ' : '') + nm(p);   // sıralamalarda unvan isimden önce
+  const nmw = (p) => nmt(p) + (p.status === 'withdrawn' ? ' (çekildi' + (p.wdFrom ? ', ' + p.wdFrom + '. turdan' : '') + ')' : '');
   const pById = (c, id) => c.players.find(p => p.id === id);
   const sysName = (s) => (s === 'swiss' ? 'İsviçre Sistemi' : 'Berger (Döner) Sistem');
   const tbOrder = (c) => (M.sysOf(c) === 'swiss' ? c.settings.tbSwiss : c.settings.tbBerger);
@@ -300,19 +301,35 @@
   function vRounds(tn, c) {
     if (!c.started) return `<h2>Turlar</h2><div class="card"><div class="note">Bu kategori henüz başlatılmadı. “Ayar” sekmesinde sistemi ve tur sayısını kontrol edip <b>Kategoriyi başlat</b>’a basın.</div><a class="b" href="#/t/${tn.id}/${c.id}/ayar">Ayar sekmesine git</a></div>`;
     const sys = c.system, Rn = M.totalRounds(c), cr = completed(c);
-    let view = rv[c.id] || 1;
+    let view = rv[c.id] != null ? rv[c.id] : 1;
     let h = `<h2>${sysName(sys)} <small class="muted">• ${Rn} tur • ${esc(c.name)}</small></h2>`;
     const lastPaired = c.rounds.length;
     const maxShow = sys === 'berger' ? Rn : Math.min(Rn, lastPaired + (lastPaired < Rn && cr === lastPaired ? 1 : 0));
-    view = Math.min(view, Math.max(1, maxShow)); rv[c.id] = view;
+    view = Math.min(view, Math.max(1, maxShow)); if (sys !== 'berger' && view < 1) view = 1; rv[c.id] = view;
     const tabs = [];
     for (let r = 1; r <= Math.max(1, maxShow); r++) {
       const rd = c.rounds[r - 1]; const done = rd && rd.pairings.length && rd.pairings.every(p => p.result);
       tabs.push(`<button class="b sm ${r === view ? '' : 'sec'}" data-act="goR" data-a="${r}">${r}. Tur ${done ? '✓' : rd ? '' : '•'}</button>`);
     }
+    if (sys === 'berger') tabs.unshift(`<button class="b sm ${view === 0 ? '' : 'sec'}" data-act="goR" data-a="0">Tümü</button>`);
     h += `<div class="card noprint"><div class="row tight" style="gap:6px">${tabs.join('')}</div></div>`;
+    if (sys === 'berger' && view === 0) return h + allRoundsPanel(tn, c);
     const rd = c.rounds[view - 1];
     return h + (!rd ? pairPanel(tn, c, view) : roundPanel(tn, c, rd, view));
+  }
+  /* Berger: tüm turların eşlendirmesi tek sayfada (salt okunur; sonuç girişi tur sekmelerinden) */
+  function allRoundsPanel(tn, c) {
+    const RS = { '1-0': '1 - 0', '1/2': '½ - ½', '0-1': '0 - 1', '+-': '+ / -', '-+': '- / +', '--': '- / -' };
+    let h = `<div class="card"><div class="row tight noprint" style="margin-bottom:8px"><button class="b sm sec" data-act="print">Yazdır</button></div>
+      <div class="printonly"><b>${esc(tn.info.name)} – ${esc(c.name)}</b> – Tüm turların eşlendirmesi ${esc(A.fmtDate(tn.info.date))}</div><div class="tblw"><table class="allr"><tr><th class="n">Tur</th><th class="n">Masa</th><th>Beyaz</th><th class="n">Sonuç</th><th>Siyah</th></tr>`;
+    c.rounds.forEach((rd, ri) => {
+      rd.pairings.forEach((pr, i) => {
+        const w = pById(c, pr.w), b = pById(c, pr.b);
+        h += `<tr${i === 0 && ri > 0 ? ' style="border-top:2px solid var(--line)"' : ''}><td class="n">${i === 0 ? '<b>' + (ri + 1) + '</b>' : ''}</td><td class="n">${pr.board}</td><td>${w.no} ${esc(nmt(w))}</td><td class="n">${RS[pr.result] || '–'}</td><td>${b.no} ${esc(nmt(b))}</td></tr>`;
+      });
+      (rd.byes || []).forEach(by => { const p = pById(c, by.p); if (p) h += `<tr><td class="n"></td><td class="n">–</td><td>${p.no} ${esc(nmt(p))}</td><td class="n">–</td><td class="muted">${by.type === 'bye' ? 'dinleniyor' : 'oynamıyor'}</td></tr>`; });
+    });
+    return h + '</table></div></div>';
   }
   function warnings(c, round) {
     const out = []; const hist = E.buildHistory(M.stateOf(c), round - 1);
@@ -436,8 +453,8 @@
     return `<h2>Sıralama ${final ? '<span class="pill">Final</span>' : ''} <small class="muted">${esc(c.name)}</small></h2>
     <div class="card noprint"><div class="row tight"><select data-act="standR" style="width:auto">${sel}</select><button class="b sec" data-act="expStand">Excel’e aktar</button><button class="b sec" data-act="print">Yazdır</button></div></div>
     <div class="card"><div class="printonly"><b>${esc(tn.info.name)} – ${esc(c.name)}</b> – ${upto}. Tur Sonrası Sıralama ${esc(A.fmtDate(tn.info.date))} ${esc(tn.info.place)}</div>
-    <div class="tblw"><table><tr><th class="n">Sıra</th><th class="n">No</th><th>Ad Soyad</th><th>Kulüp</th><th class="n">UKD/ELO</th><th class="n">Puan</th>${cols.map(k => `<th class="n" title="${esc(E.TB_DEFS[k].name)}">${E.TB_DEFS[k].short}</th>`).join('')}<th class="n" title="Çekilen sporcuya ödül verilmez">Ödül</th></tr>
-    ${rows.map(r => { const wd = r.p.status === 'withdrawn'; const pz = wd ? '' : ++prize; return `<tr class="${wd ? 'out' : ''}"><td class="n"><b>${r.tied ? "" : r.rank}</b></td><td class="n">${r.p.no}</td><td><b>${esc(nm(r.p))}</b>${r.p.female ? ' <span class="pill gray">K</span>' : ''}${wd ? ` <span class="pill err">çekildi${r.p.wdFrom ? ' (' + r.p.wdFrom + '. turdan)' : ''}</span>` : ''}</td><td>${esc(r.p.club)}</td><td class="n">${rtg(r.p)}</td><td class="n"><b>${fmt(r.pts)}</b></td>
+    <div class="tblw"><table><tr><th class="n">Sıra</th><th class="n">B.No</th><th>Ad Soyad</th><th>Kulüp</th><th class="n">UKD/ELO</th><th class="n">Puan</th>${cols.map(k => `<th class="n" title="${esc(E.TB_DEFS[k].name)}">${E.TB_DEFS[k].short}</th>`).join('')}<th class="n" title="Çekilen sporcuya ödül verilmez">Ödül</th></tr>
+    ${rows.map(r => { const wd = r.p.status === 'withdrawn'; const pz = wd ? '' : ++prize; return `<tr class="${wd ? 'out' : ''}"><td class="n"><b>${r.tied ? "" : r.rank}</b></td><td class="n">${r.p.no}</td><td><b>${esc(nmt(r.p))}</b>${r.p.female ? ' <span class="pill gray">K</span>' : ''}${wd ? ` <span class="pill err">çekildi${r.p.wdFrom ? ' (' + r.p.wdFrom + '. turdan)' : ''}</span>` : ''}</td><td>${esc(c.system === 'berger' ? String(r.p.club || '').slice(0, 25) : r.p.club)}</td><td class="n">${rtg(r.p)}</td><td class="n"><b>${fmt(r.pts)}</b></td>
       ${cols.map(k => `<td class="n">${k === 'avgr' || k === 'avgrc1' ? fmt(r.tb[k], 1) : fmt(r.tb[k])}</td>`).join('')}<td class="n">${pz}</td></tr>`; }).join('')}</table></div>
     <p class="muted" style="margin-top:8px">Eşitlik bozma sırası: ${order.map((k, i) => `${i + 1}) ${E.TB_DEFS[k].name}`).join(' → ')}. Oynanmayan turlar için sanal rakip uygulaması kullanılır; ayarlanmış puanda oynanmayan her tur ½ sayılır.</p></div>`;
   }
@@ -446,7 +463,7 @@
     const { tn, cat: c } = CT(), cr = completed(c), upto = Math.min(sr[c.id] || cr, cr);
     const RS = { '1-0': '1-0', '0-1': '0-1', '1/2': '½-½', '+-': '+/-', '-+': '-/+', '--': '-/-' };
     const pairings = []; c.rounds.forEach((rd, i) => rd.pairings.forEach(p => pairings.push([i + 1, p.board, nm(pById(c, p.w)), p.result ? RS[p.result] : '', nm(pById(c, p.b))])));
-    const wb = window.XlsxOut.buildResults(XLSX, { rows: standings(c, upto), order: tbOrder(c), defs: E.TB_DEFS, nm, cross: crossData(c, upto), pairings });
+    const wb = window.XlsxOut.buildResults(XLSX, { rows: standings(c, upto), order: tbOrder(c), defs: E.TB_DEFS, nm: nmt, clubMax: c.system === 'berger' ? 25 : 0, cross: crossData(c, upto), pairings });
     XLSX.writeFile(wb, A.safeName(tn.info.name + ' ' + c.name) + '-sonuclar.xlsx');
   };
 
@@ -462,11 +479,11 @@
     const rows = standings(c, upto), byId = new Map(c.players.map(p => [p.id, p])), order = tbOrder(c).filter(k => k !== 'direct' && k !== 'directfide');
     if (c.system === 'berger') {
       const byNo = rows.slice().sort((a, b) => a.p.no - b.p.no);
-      const out = [['Sıra', 'No', 'Ad Soyad', ...byNo.map(r => r.p.no), 'Puan', ...order.map(k => E.TB_DEFS[k].short)]];
+      const out = [['Sıra', 'B.No', 'Ad Soyad', ...byNo.map(r => r.p.no), 'Puan', ...order.map(k => E.TB_DEFS[k].short)]];
       rows.forEach(r => { const line = [r.tied ? "" : r.rank, r.p.no, nmw(r.p)]; byNo.forEach(cc => { if (cc.p.id === r.p.id) { line.push('■'); return; } line.push(r.hist.filter(x => x.opp === cc.p.id && x.kind !== 'none').map(x => (x.pending ? '' : fmt(x.pts) || '0')).join(' ')); }); line.push(r.pts, ...order.map(k => Math.round(r.tb[k] * 100) / 100)); out.push(line); });
       return out;
     }
-    const out = [['Sıra', 'No', 'Ad Soyad', 'Rtg', ...Array.from({ length: upto }, (_, i) => (i + 1) + '. Tur'), 'Puan', ...order.map(k => E.TB_DEFS[k].short)]];
+    const out = [['Sıra', 'B.No', 'Ad Soyad', 'Rtg', ...Array.from({ length: upto }, (_, i) => (i + 1) + '. Tur'), 'Puan', ...order.map(k => E.TB_DEFS[k].short)]];
     rows.forEach(r => out.push([r.tied ? "" : r.rank, r.p.no, nmw(r.p), rtg(r.p), ...r.hist.slice(0, upto).map(x => cellTxt(x, byId)), r.pts, ...order.map(k => Math.round(r.tb[k] * 100) / 100)]));
     return out;
   }
