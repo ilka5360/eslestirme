@@ -4,7 +4,7 @@
   const A = window.App, { $, $$, esc, ACT, fmt, fmtDate } = A;
   const M = window.Model, S = window.Store, R = window.Rules, I = window.Importer, E = window.Engine;
   A.M = M; A.S = S; A.E = E;
-  A.VERSION = { no: 33, date: '26.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
+  A.VERSION = { no: 34, date: '26.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
 
   /* ------------------------------------------------------------- veri */
   const boot = S.load();
@@ -59,7 +59,6 @@
     const cur = DB.tournaments[DB.cur] ? DB.cur : null;
     const hrefs = { kurallar: '#/kurallar', home: '#/', t: cur ? '#/t/' + cur : '#/', arsiv: '#/arsiv', sorgu: '#/sorgu' + (cur ? '/' + cur : ''), kayit: '#/kayit' + (cur ? '/' + cur : ''), kart: '#/kart' + (cur ? '/' + cur : '') };
     $('#nav').innerHTML = NAV.map(([k, l, ic]) => `<a href="${hrefs[k]}" class="${(R_.name === k || (k === 'home' && R_.name === 'yeni')) ? 'on' : ''}" ${R_.name === k ? 'aria-current="page"' : ''}><svg class="ic"><use href="#${ic}"/></svg><span>${l}</span></a>`).join('');
-    $('#tName').textContent = tn ? tn.info.name : (DB.tournaments[DB.cur] ? DB.tournaments[DB.cur].info.name : 'Satranç turnuva yöneticisi');
     document.title = (tn ? tn.info.name + ' – ' : '') + 'Eşle';
     const bb = $('#banner');
     const parts = [];
@@ -484,7 +483,7 @@
     const { tn } = A.ctx(); const k = el.dataset.a; let v = el.value.trim();
     if (k === 'refYear') v = Math.max(1990, Math.min(2100, +v || yearOf(tn.info.date)));
     if (k === 'name' && !v) { A.toast('Turnuva adı boş olamaz.'); return A.render(); }
-    tn.info[k] = v; A.save(); if (k === 'name') $('#tName').textContent = v;
+    tn.info[k] = v; A.save();
   });
   ACT.catName = A.mut((el) => { const { tn } = A.ctx(); const c = tn.cats.find(x => x.id === el.dataset.a); const n = M.uniqueName(tn, el.value, c.id); c.name = n; c.short = M.shortOf(n); A.save(); A.render(); });
   ACT.delCat = A.mut(async (el) => {

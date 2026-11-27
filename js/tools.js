@@ -219,18 +219,18 @@
     }
     if (tn.lastRatingBatch) h += `<div class="card noprint"><b>Son uygulama</b> <span class="muted">${esc(A.ago(tn.lastRatingAt))}</span> <button class="b sm sec" data-act="rkUndo" style="margin-left:8px">Geri al</button></div>`;
     const P = db.prefs;
-    h += `<div class="card"><h3>${st.nat ? '3' : '2'}) Sporcu başına bağlantılar</h3><p class="muted" style="margin-top:0">Bağlantılar yeni sekmede açılır; uygulama hiçbir bilgiyi otomatik göndermez. FIDE sayfası için sporcunun FIDE No’su gerekir.</p>
-      <div class="row noprint"><div><label>FIDE profil adresi şablonu <small class="muted">({fideNo})</small></label><input data-act="prefUrl" data-a="fideUrlTpl" value="${esc(P.fideUrlTpl)}" maxlength="200" placeholder="https://ratings.fide.com/profile/{fideNo}"></div>
-        <div><label>TSF sorgu adresi şablonu <small class="muted">({ad} {soyad}; {tc} yalnız onayla)</small></label><input data-act="prefUrl" data-a="tsfUrlTpl" value="${esc(P.tsfUrlTpl)}" maxlength="200" placeholder="boş = https://www.tsf.org.tr"></div></div>
-      <label class="chk noprint"><input type="checkbox" id="lk_tc"> TSF şablonundaki {tc} kimlik no ile doldurulsun (kişisel veri; önerilmez)</label>
+    h += `<div class="card"><h3>${st.nat ? '3' : '2'}) Sporcu başına bağlantılar</h3><p class="muted" style="margin-top:0">Bağlantılar yeni sekmede açılır; uygulama hiçbir bilgiyi otomatik göndermez. TSF bağlantısı UKD sorgulama sayfasına gider; FIDE sayfası için sporcunun FIDE No’su gerekir.</p>
+      <div class="row noprint"><div><label>FIDE profil adresi şablonu <small class="muted">({fideNo})</small></label><input data-act="prefUrl" data-a="fideUrlTpl" value="${esc(P.fideUrlTpl)}" maxlength="200" placeholder="https://ratings.fide.com/profile/{fideNo}"></div></div>
+      <p class="noprint" style="margin:8px 0 0"><a class="b sec sm" target="_blank" rel="noopener noreferrer" href="${TSF_UKD}">TSF UKD sorgulama ↗</a></p>
       <div class="tblw" style="margin-top:8px"><table><tr><th>Sporcu</th><th>Kategori</th><th class="n">UKD</th><th class="n">ELO</th><th>FIDE No</th><th>Bağlantılar</th></tr>${links(tn)}</table></div></div>`;
     return h;
   };
   const LVR = (t) => ({ 'kesin-tc': 0, 'kesin-fide': 0, 'kesin-ad': 0, olasi: 1, zayif: 2, belirsiz: 3 }[t] ?? 4);
+  const TSF_UKD = 'https://ukd.tsf.org.tr/ukdsorgulama.php';   // TSF UKD sorgulama sayfası (sabit)
   function links(tn) {
     const P = A.db().prefs, seen = new Set(), out = [];
     tn.cats.forEach(c => c.players.forEach(p => { if (seen.has(p.kisiId)) return; seen.add(p.kisiId);
-      const f = RM.linkFrom(P.fideUrlTpl, p), t = RM.linkFrom(P.tsfUrlTpl, p, false) || 'https://www.tsf.org.tr';
+      const f = RM.linkFrom(P.fideUrlTpl, p), t = TSF_UKD;
       out.push(`<tr><td>${esc(nm(p))}</td><td>${esc(c.name)}</td><td class="n">${p.rating || ''}</td><td class="n">${p.elo || ''}</td><td>${esc(p.fideNo)}</td><td><a class="lk" target="_blank" rel="noopener noreferrer" href="${esc(t)}">TSF ↗</a> ${f ? `<a class="lk" target="_blank" rel="noopener noreferrer" href="${esc(f)}">FIDE ↗</a>` : '<span class="muted">FIDE yok</span>'}</td></tr>`); }));
     return out.join('');
   }
