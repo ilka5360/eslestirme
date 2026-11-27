@@ -88,7 +88,7 @@
   const kcS = {};
   const kc = (tn) => {
     if (!kcS[tn.id]) kcS[tn.id] = { tab: 'yaka', cats: null, ex: new Set(), sort: 'no', withdrawn: false, merge: false, page: 0,
-      layout: (tn.card.yaka && tn.card.yaka.layout) || 'center', dx: (tn.card.yaka && +tn.card.yaka.dx) || 0, dy: (tn.card.yaka && +tn.card.yaka.dy) || 0, marks: !!(tn.card.yaka && tn.card.yaka.marks), bg: (tn.card.yaka && +tn.card.yaka.bg) || 25, font: (tn.card.yaka && tn.card.yaka.font) || 'arial', dashZero: !!(tn.card.masa && tn.card.masa.dashZero) };
+      layout: (tn.card.yaka && tn.card.yaka.layout) || 'center', dx: (tn.card.yaka && +tn.card.yaka.dx) || 0, dy: (tn.card.yaka && +tn.card.yaka.dy) || 0, marks: !!(tn.card.yaka && tn.card.yaka.marks), bg: (tn.card.yaka && +tn.card.yaka.bg) || 25, ty: { yaka: tyOf(tn.card.yaka && (tn.card.yaka.ty || tn.card.yaka)), masa: tyOf(tn.card.masa && tn.card.masa.ty) }, dashZero: !!(tn.card.masa && tn.card.masa.dashZero) };
     return kcS[tn.id];
   };
   const SLOTS_BY = {
@@ -122,8 +122,10 @@
       <label class="chk"><input type="checkbox" data-act="kcOptC" data-a="withdrawn" ${st.withdrawn ? 'checked' : ''}> Çekilenleri de bas</label>
       <label class="chk"><input type="checkbox" data-act="kcOptC" data-a="merge" ${st.merge ? 'checked' : ''}> Kategorileri birleştir (tek sayfa dizisi)</label>
       <label class="chk"><input type="checkbox" data-act="kcOptC" data-a="dashZero" ${st.dashZero ? 'checked' : ''}> Puansızsa “-” yaz (varsayılan: 0)</label></div>
+      <div class="row" style="margin-top:8px;align-items:flex-end"><div style="flex:0 1 190px"><label>Yazı tipi</label><select data-act="kcTy" data-a="font">${C.FONTS.map(f => `<option value="${f[0]}" ${st.ty[st.tab].font === f[0] ? 'selected' : ''} style="font-family:${f[2].replace(/"/g, "'")}">${f[1]}</option>`).join('')}</select></div>
+        <div style="flex:0 1 130px"><label>Yazı büyüklüğü</label><select data-act="kcTy" data-a="scale">${[70, 80, 90, 100, 110, 120, 130].map(v => `<option value="${v}" ${st.ty[st.tab].scale === v ? 'selected' : ''}>%${v}${v === 100 ? ' (varsayılan)' : ''}</option>`).join('')}</select></div>
+        <label class="chk"><input type="checkbox" data-act="kcTyC" data-a="bold" ${st.ty[st.tab].bold ? 'checked' : ''}> <b>Kalın</b></label><label class="chk"><input type="checkbox" data-act="kcTyC" data-a="italic" ${st.ty[st.tab].italic ? 'checked' : ''}> <i>İtalik</i></label></div>
       ${st.tab === 'yaka' ? `<div class="row" style="margin-top:8px"><div style="flex:0 1 200px"><label>Yerleşim</label><select data-act="kcOpt" data-a="layout"><option value="center" ${st.layout === 'center' ? 'selected' : ''}>Sayfada ortalı</option><option value="ornek" ${st.layout === 'ornek' ? 'selected' : ''}>Örnek dosyadaki konum</option></select></div>
-        <div style="flex:0 1 190px"><label>Yazı tipi</label><select data-act="kcOpt" data-a="font">${C.FONTS.map(f => `<option value="${f[0]}" ${st.font === f[0] ? 'selected' : ''} style="font-family:${f[2].replace(/"/g, "'")}">${f[1]}</option>`).join('')}</select></div>
         <div style="flex:0 1 130px"><label>Kaydır X (mm)</label><input type="number" step="0.5" min="-20" max="20" value="${st.dx}" data-act="kcOpt" data-a="dx"></div><div style="flex:0 1 130px"><label>Kaydır Y (mm)</label><input type="number" step="0.5" min="-20" max="20" value="${st.dy}" data-act="kcOpt" data-a="dy"></div>
         <div style="flex:1 1 220px"><label>Arka plan netliği: %${st.bg}</label><input type="range" min="5" max="100" step="1" value="${st.bg}" data-act="kcOpt" data-a="bg" aria-label="Arka plan netliği"><small class="muted">%25 varsayılan · %100 tam net (yazılar okunmayabilir)</small></div>
         <label class="chk"><input type="checkbox" data-act="kcOptC" data-a="marks" ${st.marks ? 'checked' : ''}> Kesim işaretleri</label></div>` : ''}
@@ -141,7 +143,8 @@
   async function thumbs(tn) {
     for (const [k] of SLOTS) { const el = $(`[data-thumb="${k}"]`); if (el && tn.assets[k]) { const u = await S.getURL(tn.id, k); if (u) { const i = document.createElement('img'); i.src = u; i.alt = ''; el.textContent = ''; el.appendChild(i); } } }
   }
-  const sheetOpts = (st) => { const i = (A.ctx().tn || {}).info || {}, d = [fmtDate(i.date), i.dateEnd && i.dateEnd !== i.date ? fmtDate(i.dateEnd) : ''].filter(Boolean).join(' – '); return { title: i.name || '', dates: d, place: i.place || '', font: st.font, bg: st.bg, layout: st.layout, dx: st.dx, dy: st.dy, marks: st.marks, dashZero: st.dashZero }; };
+  const tyOf = (o) => ({ font: (o && o.font) || 'arial', bold: !(o && o.bold === false), italic: !!(o && o.italic), scale: (o && +o.scale) || 100 });
+  const sheetOpts = (st) => { const i = (A.ctx().tn || {}).info || {}, d = [fmtDate(i.date), i.dateEnd && i.dateEnd !== i.date ? fmtDate(i.dateEnd) : ''].filter(Boolean).join(' – '); return { title: i.name || '', dates: d, place: i.place || '', font: st.ty[st.tab].font, bold: st.ty[st.tab].bold, italic: st.ty[st.tab].italic, scale: st.ty[st.tab].scale, bg: st.bg, layout: st.layout, dx: st.dx, dy: st.dy, marks: st.marks, dashZero: st.dashZero }; };
   function buildSheet(st, imgs, chunk) { return st.tab === 'yaka' ? C.yakaSheet(chunk, imgs, sheetOpts(st)) : C.masaSheet(chunk, imgs, sheetOpts(st)); }
   function allChunks(groups) { const l = []; groups.forEach(g => C.paginate(g).forEach(ch => l.push(ch))); return l; }
   async function drawPreview(tn) {
@@ -166,10 +169,12 @@
     return chunks.length;
   };
   ACT.kcPrint = async () => { A.toast('Sayfalar hazırlanıyor…', 1500); const n = await A.tools.prepareCards(); if (n) A.doPrint(); };
-  const cardsSave = (tn, st) => { tn.card.yaka = { font: st.font, bg: st.bg, layout: st.layout, dx: st.dx, dy: st.dy, marks: st.marks }; tn.card.masa = { dashZero: st.dashZero }; A.save({ clean: true }); };
+  const cardsSave = (tn, st) => { tn.card.yaka = { ty: st.ty.yaka, bg: st.bg, layout: st.layout, dx: st.dx, dy: st.dy, marks: st.marks }; tn.card.masa = { dashZero: st.dashZero, ty: st.ty.masa }; A.save({ clean: true }); };
   ACT.kcTab = (el) => { const { tn } = A.ctx(); const st = kc(tn); st.tab = el.dataset.a; st.page = 0; A.render(); };
   ACT.kcCat = (el) => { const { tn } = A.ctx(), st = kc(tn); const s = st.cats || new Set(tn.cats.map(c => c.id)); if (el.checked) s.add(el.dataset.a); else s.delete(el.dataset.a); st.cats = s; st.page = 0; A.render(); };
   ACT.kcOpt = (el) => { const { tn } = A.ctx(), st = kc(tn), k = el.dataset.a; st[k] = k === 'bg' ? Math.max(5, Math.min(100, Math.round(+el.value) || 18)) : (k === 'dx' || k === 'dy') ? Math.max(-20, Math.min(20, +el.value || 0)) : el.value; st.page = 0; cardsSave(tn, st); A.render(); };
+  ACT.kcTy = (el) => { const { tn } = A.ctx(), st = kc(tn), k = el.dataset.a; st.ty[st.tab][k] = k === 'scale' ? Math.max(60, Math.min(160, +el.value || 100)) : el.value; cardsSave(tn, st); A.render(); };
+  ACT.kcTyC = (el) => { const { tn } = A.ctx(), st = kc(tn); st.ty[st.tab][el.dataset.a] = el.checked; cardsSave(tn, st); A.render(); };
   ACT.kcOptC = (el) => { const { tn } = A.ctx(), st = kc(tn); st[el.dataset.a] = el.checked; st.page = 0; cardsSave(tn, st); A.render(); };
   ACT.kcPl = (el) => { const { tn } = A.ctx(), st = kc(tn); if (el.checked) st.ex.delete(el.dataset.a); else st.ex.add(el.dataset.a); A.render(); };
   ACT.kcAll = () => { const { tn } = A.ctx(), st = kc(tn); const sel = st.cats || new Set(tn.cats.map(c => c.id)); const ids = tn.cats.filter(c => sel.has(c.id)).flatMap(c => c.players.map(p => p.id)); if (ids.some(id => st.ex.has(id))) ids.forEach(id => st.ex.delete(id)); else ids.forEach(id => st.ex.add(id)); A.render(); };

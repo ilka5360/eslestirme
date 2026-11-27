@@ -7,8 +7,12 @@
     ['trebuchet', 'Trebuchet MS', '"Trebuchet MS", "DejaVu Sans", sans-serif'], ['verdana', 'Verdana (geniş)', 'Verdana, "DejaVu Sans", sans-serif'], ['tahoma', 'Tahoma', 'Tahoma, "DejaVu Sans", sans-serif'],
     ['palatino', 'Palatino', '"Palatino Linotype", Palatino, "Book Antiqua", serif'], ['courier', 'Courier New (daktilo)', '"Courier New", "Liberation Mono", monospace']];
   const famOf = (k) => (FONTS.find(f => f[0] === k) || FONTS[0])[2];
-  let curFam = FAM;
-  const LOGO = 'logo-tsf.jpg';
+  const LOGO = 'logo-tsf.jpg', LOGO_BAK = 'logo-bakanlik.png';
+  /** Geçerli yazı ayarı (yakaSheet/masaSheet başında o'dan kurulur): ailesi, kalın, italik, boyut çarpanı */
+  const T = { fam: FAM, bold: true, it: false, k: 1 };
+  function setTypo(o) { o = o || {}; T.fam = famOf(o.font); T.bold = o.bold !== false; T.it = !!o.italic; T.k = Math.max(0.6, Math.min(1.6, (+o.scale || 100) / 100)); }
+  const wt = (b) => (T.bold ? b : '400'), fs = () => (T.it ? 'italic' : 'normal');
+  const sc = (spec) => { const mx = spec.maxPt * T.k; return Object.assign({}, spec, { maxPt: mx, minPt: Math.min(spec.minPt, mx) }); };
   const PER = 4;
   const paginate = (arr, per) => { per = per || PER; const o = []; for (let i = 0; i < arr.length; i += per) o.push(arr.slice(i, i + per)); return o; };
   const sheetCount = (n) => Math.ceil(n / PER);
@@ -62,7 +66,7 @@
   let _ctx = null;
   function canvasMeasure(text, pt) {
     if (!_ctx) _ctx = document.createElement('canvas').getContext('2d');
-    _ctx.font = 'bold ' + (pt * 96 / 72) + 'px ' + curFam;
+    _ctx.font = (T.it ? 'italic ' : '') + (T.bold ? 'bold ' : '') + (pt * 96 / 72) + 'px ' + T.fam;
     return _ctx.measureText(text).width * 25.4 / 96;
   }
   function el(tag, cls, css, txt) {
@@ -76,8 +80,8 @@
   function box(parent, x, y, w, h, extra) { const b = el('div', 'abs', Object.assign({ left: mm(x), top: mm(y), width: mm(w), height: mm(h) }, extra || {})); parent.appendChild(b); return b; }
   function img(parent, url, x, y, w, h) { if (!url) return null; const b = box(parent, x, y, w, h); const i = document.createElement('img'); i.src = url; i.alt = ''; i.className = 'fillimg'; b.appendChild(i); return b; }
   function textBox(parent, text, x, y, w, h, spec, extra) {
-    const f = fit(text, { maxPt: spec.maxPt, minPt: spec.minPt, maxMm: spec.maxMm || w - 2 }, canvasMeasure);
-    const b = box(parent, x, y, w, h, Object.assign({ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontWeight: '700', fontFamily: curFam, fontSize: f.pt + 'pt', lineHeight: '1.05', whiteSpace: f.wrap ? 'normal' : 'nowrap', overflow: 'hidden' }, extra || {}));
+    spec = sc(spec); const f = fit(text, { maxPt: spec.maxPt, minPt: spec.minPt, maxMm: spec.maxMm || w - 2 }, canvasMeasure);
+    const b = box(parent, x, y, w, h, Object.assign({ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontWeight: wt('700'), fontStyle: fs(), fontFamily: T.fam, fontSize: f.pt + 'pt', lineHeight: '1.05', whiteSpace: f.wrap ? 'normal' : 'nowrap', overflow: 'hidden' }, extra || {}));
     b.textContent = text; return b;
   }
   const PAWN = 'M12 2a3.5 3.5 0 0 0-2 6.4C8.7 9.3 8 10.8 8 12h8c0-1.2-.7-2.7-2-3.6A3.5 3.5 0 0 0 12 2zM7 13l-1 4h12l-1-4H7zM5 18l-1 3h16l-1-3H5z';
@@ -92,16 +96,16 @@
       .forEach(([a, b, lw, lh]) => parent.appendChild(el('div', 'abs', { left: mm(a), top: mm(b), width: lw ? mm(lw) : '0', height: lh ? mm(lh) : '0', borderTop: lw ? '0.2mm solid ' + c : '0', borderLeft: lh ? '0.2mm solid ' + c : '0' })));
   }
 
-  function headText(parent, text, x, y, w, h) {
-    const f = wrapFit(text, w - 2, h, 20, 10, canvasMeasure);
-    const b = box(parent, x, y, w, h, { display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontWeight: '700', fontFamily: curFam, fontSize: f.pt + 'pt', lineHeight: '1.15', color: '#111', overflow: 'hidden' });
+  function headText(parent, text, x, y, w, h, maxPt) {
+    const mx = (maxPt || 20) * T.k, f = wrapFit(text, w - 2, h, mx, Math.min(10, mx), canvasMeasure);
+    const b = box(parent, x, y, w, h, { display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontWeight: wt('700'), fontStyle: fs(), fontFamily: T.fam, fontSize: f.pt + 'pt', lineHeight: '1.15', color: '#111', overflow: 'hidden' });
     b.textContent = text; return b;
   }
   function footText(parent, dates, place, x, y, w, h) {
     if (!dates && !place) return null;
-    const b = box(parent, x, y, w, h, { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontFamily: curFam, color: '#111', overflow: 'hidden' });
-    if (dates) { const f = fit(dates, { maxPt: 12, minPt: 8, maxMm: w - 2 }, canvasMeasure); b.appendChild(el('div', null, { fontWeight: '700', fontSize: f.pt + 'pt', lineHeight: '1.2' }, dates)); }
-    if (place) { const f = wrapFit(place, w - 2, dates ? h - 5.5 : h, 10, 6.5, canvasMeasure); b.appendChild(el('div', null, { fontWeight: '600', fontSize: f.pt + 'pt', lineHeight: '1.15' }, place)); }
+    const b = box(parent, x, y, w, h, { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontFamily: T.fam, fontStyle: fs(), color: '#111', overflow: 'hidden' });
+    if (dates) { const f = fit(dates, { maxPt: 12 * T.k, minPt: Math.min(8, 12 * T.k), maxMm: w - 2 }, canvasMeasure); b.appendChild(el('div', null, { fontWeight: wt('700'), fontSize: f.pt + 'pt', lineHeight: '1.2' }, dates)); }
+    if (place) { const f = wrapFit(place, w - 2, dates ? h - 5.5 : h, 10 * T.k, Math.min(6.5, 10 * T.k), canvasMeasure); b.appendChild(el('div', null, { fontWeight: wt('600'), fontSize: f.pt + 'pt', lineHeight: '1.15' }, place)); }
     return b;
   }
 
@@ -109,7 +113,7 @@
   function yakaSheet(items, imgs, o) {
     o = o || {};
     const sh = el('div', 'sheet');
-    curFam = famOf(o.font);
+    setTypo(o);
     items.forEach((it, i) => {
       const pos = yakaPos(i, o), c = box(sh, pos.x, pos.y, YAKA.w, YAKA.h, { border: '0.2mm solid #999', overflow: 'hidden', background: '#fff' });
       c.classList.add('ykc');
@@ -123,7 +127,7 @@
       const L = yakaLines(it.p), W = YAKA.maxMm;
       textBox(c, L.l1, 7, 55, 76, 11, { maxPt: YAKA.name.maxPt, minPt: YAKA.name.minPt, maxMm: W });
       textBox(c, L.l2, 7, 66, 76, 11, { maxPt: YAKA.name.maxPt, minPt: YAKA.name.minPt, maxMm: W });
-      if (L.club) textBox(c, L.club, 7, 82, 76, 10, { maxPt: YAKA.club.maxPt, minPt: YAKA.club.minPt, maxMm: W }, { fontWeight: '600' });
+      if (L.club) textBox(c, L.club, 7, 82, 76, 10, { maxPt: YAKA.club.maxPt, minPt: YAKA.club.minPt, maxMm: W }, { fontWeight: wt('600') });
       if (imgs.footer) img(c, imgs.footer, 9, 99, 72, 17); else footText(c, o.dates, o.place, 9, 99, 72, 17);
       if (o.marks) cutMarks(sh, pos.x, pos.y, YAKA.w, YAKA.h);
     });
@@ -132,25 +136,24 @@
   function masaSheet(items, imgs, o) {
     o = o || {};
     const sh = el('div', 'sheet');
-    curFam = FAM;
+    setTypo(o);
     MASA.cuts.forEach(y => sh.appendChild(el('div', 'abs', { left: '0', top: mm(y), width: mm(210), height: '0', borderTop: '0.2mm solid #888' })));
     items.forEach((it, i) => {
       const top = MASA.top + i * MASA.pitch, d = masaData(it.p, it.cat, o);
       box(sh, 7.2, top + 5.7, 196, 55.6, { border: '0.8mm solid #000', borderRadius: '8mm' });
-      const hasL = !!imgs.logoL, hasR = !!imgs.logoR;
-      img(sh, imgs.logoL, 13, top + 9, 22, 21);
-      const hx = hasL ? 36 : 13, hw = (hasR ? 131 : 152) - hx;
-      img(sh, imgs.header, hx, top + 11.5, hw, 19.5);
-      img(sh, imgs.logoR, 133, top + 9, 19, 21);
+      img(sh, imgs.logoL || LOGO_BAK, 13, top + 9, 22, 21);   // varsayılan: Gençlik ve Spor Bakanlığı
+      const hx = 36, hw = 131 - hx;
+      if (imgs.header) img(sh, imgs.header, hx, top + 11.5, hw, 19.5); else if (o.title) headText(sh, o.title, hx, top + 11.5, hw, 19.5, 22);
+      img(sh, imgs.logoR || LOGO, 133, top + 9, 19, 21);   // varsayılan: federasyon
       const rb = (x, y, w, h) => box(sh, x, y, w, h, { border: '0.3mm solid #000', borderRadius: '3mm' });
       rb(155.6, top + 14.3, 44.6, 13.7);
       textBox(sh, d.cat, 156.6, top + 14.3, 42.6, 13.7, MASA.cat);
       rb(13.3, top + 33, 140.7, 26.5);
-      const nb = box(sh, 13.3, top + 33, 140.7, 26.5, { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: FAM, fontWeight: '700', textAlign: 'center', overflow: 'hidden' });
-      const line = (t, spec) => { const f = fit(t, spec, canvasMeasure); const d2 = el('div', null, { fontSize: f.pt + 'pt', lineHeight: '1.15', whiteSpace: f.wrap ? 'normal' : 'nowrap', maxWidth: mm(spec.maxMm + 2) }, t); nb.appendChild(d2); };
+      const nb = box(sh, 13.3, top + 33, 140.7, 26.5, { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: T.fam, fontStyle: fs(), fontWeight: wt('700'), textAlign: 'center', overflow: 'hidden' });
+      const line = (t, spec) => { spec = sc(spec); const f = fit(t, spec, canvasMeasure); const d2 = el('div', null, { fontSize: f.pt + 'pt', lineHeight: '1.15', whiteSpace: f.wrap ? 'normal' : 'nowrap', maxWidth: mm(spec.maxMm + 2) }, t); nb.appendChild(d2); };
       line(d.name, MASA.name); if (d.club) line(d.club, MASA.club);
       rb(155.6, top + 33, 45, 26.5);
-      const rt = box(sh, 159.4, top + 33, 40, 26.5, { display: 'flex', flexDirection: 'column', justifyContent: 'center', fontFamily: FAM, fontWeight: '700', fontSize: '19.5pt', lineHeight: '1.3' });
+      const rt = box(sh, 159.4, top + 33, 40, 26.5, { display: 'flex', flexDirection: 'column', justifyContent: 'center', fontFamily: T.fam, fontStyle: fs(), fontWeight: wt('700'), fontSize: (19.5 * Math.min(T.k, 1.15)) + 'pt', lineHeight: '1.3' });
       rt.appendChild(el('div', null, null, d.elo)); rt.appendChild(el('div', null, null, d.ukd));
     });
     return sh;
