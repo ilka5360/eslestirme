@@ -529,6 +529,6 @@
     <h3>Eşitlik bozma</h3><p>Sıra “Ayar” sekmesinden kategori başına ayarlanır. Varsayılan sıralar “Eşitlik bozma yöntemleri” belgesindeki öneriye göredir: <b>Berger:</b> Doğrudan karşılaşma (DE) → Sonneborn-Berger → Galibiyet sayısı (WIN). <b>İsviçre (Swiss-Manager varsayılanı):</b> Eş puan grubundaki sonuçlar → Buchholz alttan −1 → Sonneborn-Berger → Rakiplerin Buchholz ortalaması → Galibiyet sayısı.</p>
     <p><b>Ayarlanmış puan:</b> oynanmayan her tur ½ sayılır. <b>Sanal rakip:</b> kendi oynamadığı turlarda rakip puanı yerine <code>Ov = Sp + (1 − Sr) + ½·(N − R)</code> kullanılır. Hepsi eşitse başlangıç numarası küçük olan önde gösterilir (kura/hakem kararı gerekir).</p>
     <h3>Yaş kategorileri</h3><p>“N yaş ve altı” = turnuva yılı − doğum yılı ≤ N. Varsayılan olarak sporcu bir kategoride yer alır (en küçük yaş kategorisine taşınır); sihirbazda “birden çok kategoride oynayabilsin” seçilirse kopyalanır.</p>
-    <h3>Not</h3><p>Bu program Swiss-Manager’ın yerine geçmek üzere FIDE Dutch ilkeleriyle yazılmıştır; küçük masa farkları olabilir. Resmî UKD/ELO bildirimi için sonuçları Excel’e aktarıp kullanabilirsiniz.</p></div>`;
+    <h3>Not</h3><p>Bu program FIDE Dutch ilkeleriyle yazılmıştır; Swiss Manager programına göre küçük masa farkları olabilir. Resmî UKD/ELO bildirimleri için kullanılmaz. Amacım özel turnuvalarda eşleştirme programı ihtiyacını karşılamaktır.</p></div>`;
   }
 })();
