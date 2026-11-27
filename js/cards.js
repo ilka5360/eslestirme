@@ -81,7 +81,7 @@
     items.forEach((it, i) => {
       const pos = yakaPos(i, o), c = box(sh, pos.x, pos.y, YAKA.w, YAKA.h, { border: '0.2mm solid #999', overflow: 'hidden', background: '#fff' });
       c.classList.add('ykc');
-      if (imgs.cardBg) { const b = img(c, imgs.cardBg, 0, 0, YAKA.w, YAKA.h); b.style.opacity = '.18'; } else c.classList.add('ykbg');
+      if (imgs.cardBg) { const b = img(c, imgs.cardBg, 0, 0, YAKA.w, YAKA.h); b.style.opacity = String(Math.max(0.05, Math.min(1, (+o.bg || 18) / 100))); } else c.classList.add('ykbg');
       img(c, imgs.yHeader, 9, 11, 72, 36);
       c.appendChild(el('div', 'abs', { left: mm(14), top: mm(50.5), width: mm(62), height: '0', borderTop: '0.35mm solid #444' }));
       const pw = el('div', 'abs', { left: mm(41.5), top: mm(48), width: mm(7), height: mm(5), background: '#fff' }); c.appendChild(pw); pawnSvg(c, 42, 47.7, 6);
