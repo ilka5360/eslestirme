@@ -297,3 +297,65 @@ table.st th,table.st td{white-space:nowrap;padding:7px 8px}
   table.st th,table.st td{padding:7px 6px;font-size:13px}
   table.st .ph,table.st .ph2{display:none}
 }
+
+@media (max-width:760px){.tblw.fit table.sp td.c-x{order:6}}
+
+.themebtn{margin-left:auto;background:rgba(255,255,255,.14);color:#fff;border:0;border-radius:9px;width:38px;height:38px;font-size:19px;line-height:1;cursor:pointer;flex:none}
+.themebtn:hover{background:rgba(255,255,255,.26)}
+@media (max-width:760px){.top{flex-wrap:nowrap}.themebtn{margin-left:auto}}
+
+/* v58 gece teması (yalnız ekranda; yazdırma ve kartlar her zaman açık renk) */
+@media screen{
+html[data-theme=dark]{color-scheme:dark;
+  --g:#8fdca9; --g2:#1f7a45; --g3:#1d3a27; --bg:#0f1511; --card:#18211b; --tx:#e7ede8; --mut:#9fb0a2;
+  --line:#2c3a2f; --warn:#f2b04c; --warnbg:#3a2d10; --err:#f19090; --errbg:#401d1d; --ok:#6fdc96; --bd1:#2a3a2a; --bd2:#4f7a3a}
+html[data-theme=dark] .top{background:#0b2a18}
+html[data-theme=dark] button.b:hover{background:#2a8d54}
+html[data-theme=dark] button.b.red{background:#b42323;color:#fff}
+html[data-theme=dark] button.b.sec,html[data-theme=dark] .b.sec,html[data-theme=dark] a.b.sec,html[data-theme=dark] label.b,html[data-theme=dark] a.lk{background:#233127;color:#b9e8c9}
+html[data-theme=dark] button.b.sec:hover{background:#2c3d31}
+html[data-theme=dark] input,html[data-theme=dark] select,html[data-theme=dark] textarea{background:#101712;border-color:#3a4b3d;color:var(--tx)}
+html[data-theme=dark] table{background:var(--card)}
+html[data-theme=dark] th{background:#1f2b22;color:#b6c7b9}
+html[data-theme=dark] tr:hover td{background:#1d2820}
+html[data-theme=dark] td,html[data-theme=dark] th{border-color:var(--line)}
+html[data-theme=dark] .pill.gray,html[data-theme=dark] .sti.gray{background:#2a332c;color:#c3cfc5}
+html[data-theme=dark] .note{background:#33290f;color:#f1d9a0}
+html[data-theme=dark] .note.info{background:#10293a;color:#a7d8f5}
+html[data-theme=dark] .note.err{background:#401d1d;color:#f5b4b4}
+html[data-theme=dark] .note.ok{background:#17321f;color:#b3e8c4}
+html[data-theme=dark] .rb,html[data-theme=dark] .wchip{background:#233127;border-color:#3a4b3d;color:#e7ede8}
+html[data-theme=dark] .bchip{background:#000}
+html[data-theme=dark] .chip,html[data-theme=dark] .chip2{background:#1e2a21;border-color:#33463a}
+html[data-theme=dark] .bar{background:#2a362d}
+html[data-theme=dark] .stats>div,html[data-theme=dark] .steps li,html[data-theme=dark] .flow li,html[data-theme=dark] .ctab{background:var(--card)}
+html[data-theme=dark] .steps li span,html[data-theme=dark] .ctab span,html[data-theme=dark] .flow li:before{background:#2a362d;color:#d6e2d8}
+html[data-theme=dark] .ctab.on{background:#1f3326;color:var(--g)}
+html[data-theme=dark] .flow li:has(a):hover{background:#1f3326}
+html[data-theme=dark] .tbl-order li,html[data-theme=dark] .kv>div,html[data-theme=dark] code{background:#1d281f}
+html[data-theme=dark] .drop{background:#142019;border-color:#3f6a47}
+html[data-theme=dark] .drop.over,html[data-theme=dark] .drop:hover{background:#1b2d20}
+html[data-theme=dark] dialog{background:var(--card);color:var(--tx)}
+html[data-theme=dark] #nav a{color:#cfe0d2}
+html[data-theme=dark] #nav a.on{background:#1f3326;color:var(--g)}
+html[data-theme=dark] .sheetwrap{background:#0b100c}
+html[data-theme=dark] .sti{background:#1d3a27;color:#8fdca9}
+html[data-theme=dark] .sti.warn{background:#3a2d10;color:#f2b04c}
+html[data-theme=dark] .sti.err{background:#401d1d;color:#f19090}
+html[data-theme=dark] a{color:#8fdca9}
+html[data-theme=dark] a.b{color:#fff}
+html[data-theme=dark] .bn a.b.sm,html[data-theme=dark] a.b.sec{color:#b9e8c9}
+}
+@media screen and (max-width:760px){
+html[data-theme=dark] #nav{background:#101a13;border-top-color:#2c3a2f;box-shadow:0 -4px 14px rgba(0,0,0,.5)}
+html[data-theme=dark] #nav a.on{background:#1f3326}
+html[data-theme=dark] table.st th,html[data-theme=dark] table.st td{background:transparent}
+}
+@media screen and (max-width:760px){
+html[data-theme=dark] .tblw.fit table.sp td[data-l]{color:#e0e8e1}
+html[data-theme=dark] .tblw.fit table.sp td.c-club{color:#a9b9ac}
+html[data-theme=dark] .tblw.fit table.sp td.c-no{color:#9fb0a2}
+html[data-theme=dark] .tblw.fit table.sp td[data-l]::before{color:#8a9b8d}
+html[data-theme=dark] table.sp tr{border-bottom-color:#2c3a2f}
+}
+@media (max-width:760px){.tblw.fit table.sp td.c-x{padding-left:0}.tblw.fit table.sp td.c-x:first-of-type{padding-left:34px}}

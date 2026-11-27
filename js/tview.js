@@ -134,8 +134,42 @@
   ACT.tbReset = guard(() => { const c = CAT(); c.settings[tbKey(c)] = E.DEFAULT_TB[M.sysOf(c)].slice(); A.save(); A.render(); });
 
   /* ============================================================= SPORCULAR */
+  /* Sporcu tablosunda gösterilecek sütunlar (kullanıcı seçer; bu cihazda saklanır) */
+  const maskTC = (s) => (s && s.length === 11 ? s.slice(0, 3) + '******' + s.slice(-2) : (s || ''));
+  const SPC = {
+    no: { l: 'No', def: 1, th: '<th class="n">No</th>', td: ({ p }) => `<td class="n c-no">${p.no || ''}</td>` },
+    name: { l: 'Soyad Ad', def: 1, th: '<th>Soyad Ad</th>', td: ({ p, other }) => `<td class="c-nm"><b>${esc(nmt(p))}</b>${p.female ? ' <span class="pill gray">K</span>' : ''}${other[p.kisiId] ? ` <span class="pill gray" title="${esc(other[p.kisiId].join(', '))}">+${other[p.kisiId].length} kategori</span>` : ''}</td>` },
+    club: { l: 'Kulüp', def: 1, th: '<th>Kulüp</th>', td: ({ p }) => `<td class="c-club" title="${esc(p.club)}">${esc(clubS(p.club))}</td>` },
+    fed: { l: 'Federasyon', def: 2, th: '<th>Fed</th>', td: ({ p }) => `<td class="c-x" data-l="Fed">${esc(p.fed)}</td>` },
+    yr: { l: 'Doğum yılı', def: 1, th: '<th class="n">Doğum</th>', td: ({ p }) => `<td class="n c-yr" data-l="Doğum">${esc(p.birthYear || '')}</td>` },
+    ukd: { l: 'UKD', def: 1, th: '<th class="n">UKD</th>', td: ({ p }) => `<td class="n c-ukd" data-l="UKD">${p.rating || ''}</td>` },
+    elo: { l: 'ELO', def: 1, th: '<th class="n">ELO</th>', td: ({ p }) => `<td class="n c-elo" data-l="ELO">${p.elo || ''}</td>` },
+    fide: { l: 'FIDE No', def: 2, th: '<th>FIDE No</th>', td: ({ p }) => `<td class="c-x" data-l="FIDE">${esc(p.fideNo)}</td>` },
+    title: { l: 'Unvan', def: 2, th: '<th>Unvan</th>', td: ({ p }) => `<td class="c-x" data-l="Unvan">${esc(p.title || '')}</td>` },
+    tc: { l: 'TC kimlik (maskeli) – kişisel veri', def: 0, th: '<th>TC</th>', td: ({ p }) => `<td class="c-x" data-l="TC">${esc(maskTC(p.tc))}</td>` },
+    tel: { l: 'Telefon – kişisel veri', def: 0, th: '<th>Telefon</th>', td: ({ p }) => `<td class="c-x" data-l="Tel">${esc(p.tel || '')}</td>` },
+    status: { l: 'Durum', def: 1, th: '<th>Durum</th>', td: ({ p, wd }) => `<td class="c-st">${wd ? A.stIco('x', 'Çekildi' + (p.wdFrom ? ' (' + p.wdFrom + '. turdan)' : ''), 'err') : (p.joinRound > 1 ? '<span class="pill warn">' + p.joinRound + '. turdan</span>' : A.stIco('ok', 'Aktif'))}</td>` }
+  };
+  const SPC_KEY = 'eslestirme-spcols';
+  const spCols = () => {
+    let sv = null; try { sv = JSON.parse(localStorage.getItem(SPC_KEY) || 'null'); } catch (e) { /* yok */ }
+    if (Array.isArray(sv)) { const o = Object.keys(SPC).filter(k => sv.includes(k)); if (o.length) return o; }
+    const wide = window.innerWidth > 1100;
+    return Object.keys(SPC).filter(k => SPC[k].def === 1 || (SPC[k].def === 2 && wide));
+  };
+  ACT.spCols = () => {
+    const cur = new Set(spCols());
+    A.dialog(`<h3>Sporcular tablosunda gösterilecek bilgiler</h3><p class="muted" style="margin-top:0">Seçiminiz bu cihazda saklanır.</p>
+      ${Object.keys(SPC).map(k => `<label class="chk"><input type="checkbox" data-k="${k}" ${cur.has(k) ? 'checked' : ''}> ${esc(SPC[k].l)}</label>`).join('')}
+      <div class="note" style="margin-top:8px">TC kimlik ve telefon kişisel veridir (KVKK). Ekranı başkalarına göstermeden önce kapatın; ekran görüntüsü paylaşırken dikkat edin.</div>
+      <div class="row tight" style="margin-top:12px"><button class="b" id="sc_ok">Uygula</button><button class="b sec" id="sc_def">Varsayılan</button><button class="b sec" data-close>Vazgeç</button></div>`, d => {
+      $('#sc_ok', d).onclick = () => { const v = [...d.querySelectorAll('input[data-k]')].filter(x => x.checked).map(x => x.dataset.k); if (!v.length) return A.toast('En az bir sütun seçin.'); try { localStorage.setItem(SPC_KEY, JSON.stringify(v)); } catch (e) { /* yok */ } d.close(); A.render(); };
+      $('#sc_def', d).onclick = () => { try { localStorage.removeItem(SPC_KEY); } catch (e) { /* yok */ } d.close(); A.render(); };
+    });
+  };
   const spSel = new Set();
   function vSpor(tn, c) {
+    const cols = spCols();
     const n = c.players.length, locked = c.started && c.system === 'berger', canAdd = M.canAddPlayer(c);
     const can = M.canDelete(c), reo = M.canReorder(c), sel = [...spSel].filter(id => c.players.some(p => p.id === id));
     const others = tn.cats.filter(x => x !== c && !x.rounds.length);
@@ -148,19 +182,17 @@
       <button class="b sec" data-act="fromT" ${canAdd ? '' : 'disabled'}>Başka kategoriden aktar</button>
       ${can && n ? `<button class="b sec" data-act="spAll">${sel.length === n ? 'Seçimi kaldır' : 'Tümünü seç'}</button><button class="b red" data-act="delSel" ${sel.length ? '' : 'disabled'}>Seçilenleri sil${sel.length ? ' (' + sel.length + ')' : ''}</button>` : ''}
       ${reo && n > 1 ? '<button class="b sec" data-act="spResort" title="UKD/ELO → unvan → soyad A–Z kuralıyla tüm numaraları yeniden verir">↻ Başlangıç sıralamasını yenile</button>' : ''}
-      ${n && !locked ? '<button class="b sec" data-act="fixNames">Ad / soyad düzelt</button>' : ''}
+      <button class="b sec" data-act="spCols" title="Tabloda gösterilecek bilgileri seçin">☰ Sütunlar</button>
       <button class="b sec" data-act="print">Yazdır</button></div>
       ${!c.started ? `<div class="note info">Başlangıç sıralaması: <b>kuvvet puanı</b> (UKD/ELO’nun yükseği) → <b>unvan</b> → <b>alfabetik</b>. ${n > R.BERGER_MAX ? '' : 'Berger sisteminde numaralar <b>kura ile</b> verilir (başlatılırken). '}${n && n <= R.BERGER_MAX ? '<button class="b sm sec" data-act="drawB">Kura çek</button>' : ''}</div>` : ''}
       ${c.started && c.system === 'swiss' && !canAdd ? '<div class="note">Prosedür md.17(3): 2. tur eşlendirmesi duyurulduktan sonra yeni sporcu alınmaz.</div>' : ''}
       ${locked ? '<div class="note">Berger turnuvası başladı; sporcu listesi kilitli (çekilme yapılabilir).</div>' : ''}</div>
-    <div class="card"><div class="tblw fit"><table class="sp"><tr>${can ? '<th class="noprint"></th>' : ''}<th class="n">No</th><th>Soyad Ad</th><th>Kulüp</th><th class="opt">Fed</th><th class="n">Doğum</th><th class="n">UKD</th><th class="n">ELO</th><th class="opt">FIDE No</th><th class="opt">Unvan</th><th>Durum</th><th class="noprint"></th></tr>
-    ${players.map(p => { const wd = p.status === 'withdrawn'; return `<tr class="${wd ? 'out' : ''}">${can ? `<td class="noprint c-chk"><input type="checkbox" data-act="spChk" data-a="${p.id}" ${spSel.has(p.id) ? 'checked' : ''} aria-label="Seç"></td>` : ''}<td class="n c-no">${p.no || ''}</td><td class="c-nm"><b>${esc(nmt(p))}</b>${p.female ? ' <span class="pill gray">K</span>' : ''}${other[p.kisiId] ? ` <span class="pill gray" title="${esc(other[p.kisiId].join(', '))}">+${other[p.kisiId].length} kategori</span>` : ''}</td>
-      <td class="c-club" title="${esc(p.club)}">${esc(clubS(p.club))}</td><td class="opt">${esc(p.fed)}</td><td class="n c-yr" data-l="Doğum">${esc(p.birthYear || '')}</td><td class="n c-ukd" data-l="UKD">${p.rating || ''}</td><td class="n c-elo" data-l="ELO">${p.elo || ''}</td><td class="opt">${esc(p.fideNo)}</td><td class="opt">${esc(p.title || '')}</td>
-      <td class="c-st">${wd ? A.stIco('x', 'Çekildi' + (p.wdFrom ? ' (' + p.wdFrom + '. turdan)' : ''), 'err') : (p.joinRound > 1 ? '<span class="pill warn">' + p.joinRound + '. turdan</span>' : A.stIco('ok', 'Aktif'))}</td>
+    <div class="card"><div class="tblw fit"><table class="sp"><tr>${can ? '<th class="noprint"></th>' : ''}${cols.map(k => SPC[k].th).join('')}<th class="noprint"></th></tr>
+    ${players.map(p => { const wd = p.status === 'withdrawn'; const ctx = { p, wd, other }; return `<tr class="${wd ? 'out' : ''}">${can ? `<td class="noprint c-chk"><input type="checkbox" data-act="spChk" data-a="${p.id}" ${spSel.has(p.id) ? 'checked' : ''} aria-label="Seç"></td>` : ''}${cols.map(k => SPC[k].td(ctx)).join('')}
       <td class="noprint act-cell">${A.ib('editP', p.id, 'edit', 'Düzenle', 'sec', locked ? 'disabled' : '')}
         ${others.length && can ? A.ib('moveP', p.id, 'move', 'Kategori değiştir') : ''}
         ${wd ? A.ib('reactP', p.id, 'undo', 'Çekilmeyi geri al') : (c.started && !can && c.system === 'swiss' ? A.ib('wdP', p.id, 'wd', 'Turnuvadan çekil', 'red') : '')}
-        ${can ? A.ib('delP', p.id, 'del', 'Sporcuyu sil', 'red') : ''}</td></tr>`; }).join('') || '<tr><td colspan="12" class="muted">Henüz sporcu eklenmedi. Excel/CSV içe aktarın, tablodan yapıştırın veya tek tek ekleyin.</td></tr>'}
+        ${can ? A.ib('delP', p.id, 'del', 'Sporcuyu sil', 'red') : ''}</td></tr>`; }).join('') || `<tr><td colspan="${cols.length + 2}" class="muted">Henüz sporcu eklenmedi. Excel/CSV içe aktarın, tablodan yapıştırın veya tek tek ekleyin.</td></tr>`}
     </table></div></div>
     <div class="row tight noprint wnav" style="margin-top:12px"><button class="b" data-act="goAyar" ${n < 3 ? 'disabled title="En az 3 sporcu gerekli"' : ''}>İleri → Tur ve zaman bilgileri</button></div>`;
   }

@@ -4,7 +4,7 @@
   const A = window.App, { $, $$, esc, ACT, fmt, fmtDate } = A;
   const M = window.Model, S = window.Store, R = window.Rules, I = window.Importer, E = window.Engine;
   A.M = M; A.S = S; A.E = E;
-  A.VERSION = { no: 57, date: '27.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
+  A.VERSION = { no: 58, date: '27.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
 
   /* ------------------------------------------------------------- veri */
   const boot = S.load();
@@ -198,7 +198,7 @@
     return `<h2>Veri güvenliği</h2><div class="card noprint">
       <p style="margin-top:0">Son yedek: <b>${esc(A.ago(DB.lastBackup))}</b> ${DB.dirty && DB.lastBackup ? '<span class="pill warn">sonra değişiklik var</span>' : ''}</p>
       <div class="row tight"><button class="b" data-act="backup">Yedek al (JSON)</button><button class="b sec" data-act="impBackup">Yedekten yükle</button><button class="b sec" data-act="snaps">Anlık yedekler</button></div>
-      <p class="muted" style="margin:10px 0 0">Veriler bu tarayıcıda saklanır. TC kimlik ve telefon bilgileri yedeğe <b>varsayılan olarak eklenmez</b>. Tarayıcı verisi temizlenirse kayıtlar silinir; düzenli yedek alın.</p>
+      <p class="muted" style="margin:10px 0 0">Veriler bu tarayıcıda saklanır. Yedek alırken TC kimlik ve telefon bilgileri <b>varsayılan olarak eklenir</b> (kişisel veridir; dosyayı güvenli saklayın, dilerseniz işareti kaldırabilirsiniz). Tarayıcı verisi temizlenirse kayıtlar silinir; düzenli yedek alın.</p>
       ${!F.supported ? '<div class="note">Bu tarayıcı otomatik dosyaya yazmayı desteklemiyor (Chrome/Edge masaüstü gerekir).</div>' :
         `<h3 style="margin-top:14px">Otomatik JSON dosyası</h3><p class="muted" style="margin:0 0 8px">Seçtiğiniz dosyaya her değişiklikte yazılır (TC/telefon yazılmaz). OneDrive klasörüne koyarsanız yedekli olur.</p>
         <div class="row tight">${F.state === 'bagli' ? `<span class="pill">Bağlı: ${esc(F.handle.name)}</span><button class="b sm sec" data-act="saveNow">Şimdi kaydet</button><button class="b sm sec" data-act="unlinkDb">Bağlantıyı kes</button>` :
@@ -206,11 +206,20 @@
           `<button class="b sec" data-act="newDb">Yeni dosya oluştur</button><button class="b sec" data-act="openDb">Mevcut dosyayı aç</button>`}${F.state === 'hata' ? '<span class="pill err">yazma hatası</span>' : ''}</div>
         ${F.state === 'bagli' && F.last ? `<p class="muted" style="margin:6px 0 0">Son yazma: ${F.last.toLocaleTimeString('tr-TR')}</p>` : ''}`}</div>`;
   }
+  /* Yedek dosyasının nereye kaydedildiğini cihaza göre açıklar */
+  A.saveWhere = () => {
+    const ua = navigator.userAgent || '', ios = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1), and = /Android/i.test(ua);
+    if (A.native) return 'Açılan paylaşma menüsünde seçtiğiniz yere kaydedilir (ör. “Dosyalar / İndirilenler”, Drive). Menüyü kapattıysanız yedek alınmamış olur; yeniden deneyin.';
+    if (ios) return 'iPhone/iPad: dosya “Dosyalar” uygulamasında, “İndirilenler” klasörüne (iCloud Drive veya Bu iPhone) kaydedilir. Paylaşma ekranı açılırsa “Dosyalara Kaydet” ile klasörü siz seçersiniz.';
+    if (and) return 'Telefon/tablet: “İndirilenler” (Download) klasörüne kaydedildi; Dosyalar uygulamasından açabilirsiniz.';
+    return 'Tarayıcınızın indirme klasörüne (genellikle “İndirilenler”) kaydedildi. Tarayıcı her seferinde yer soruyorsa seçtiğiniz klasördedir.';
+  };
   ACT.backup = (el) => {
     const tid = el && el.dataset && el.dataset.a || null;
     $('#dlg').open && $('#dlg').close();
     A.dialog(`<h3>${tid ? 'Turnuva yedeği' : 'Yedek indir'} (JSON)</h3>
-      <label class="chk"><input type="checkbox" id="bk_pii"> TC kimlik ve telefon bilgilerini de ekle <span class="muted">(önerilmez; dosyayı güvenli saklayın)</span></label>
+      <label class="chk"><input type="checkbox" id="bk_pii" checked> TC kimlik ve telefon bilgilerini de ekle <span class="muted">(yedekten dönünce bu bilgiler gerekir)</span></label>
+      <div class="note"><b>Kişisel veri uyarısı (KVKK):</b> TC kimlik numarası ve telefon kişisel veridir. Bu bilgileri içeren yedek dosyasını yalnızca güvenli bir yerde saklayın; e-posta, mesajlaşma uygulamaları veya ortak klasörlerle paylaşmayın, işi bitince silin.</div>
       <label class="chk"><input type="checkbox" id="bk_img"> Kart görsellerini de ekle (dosya büyür)</label>
       <div class="row tight" style="margin-top:12px"><button class="b" id="bk_ok">İndir</button><button class="b sec" data-close>Vazgeç</button></div>`, d => {
       $('#bk_ok', d).onclick = async () => {
@@ -223,7 +232,12 @@
           const nm = tid ? A.safeName(DB.tournaments[tid].info.name) : 'tum-turnuvalar';
           A.download(new Blob([JSON.stringify(b, null, 1)], { type: 'application/json' }), `eslestirme-yedek-${nm}-${today()}.json`);
           if (!tid) { DB.lastBackup = Date.now(); DB.dirty = false; A.save({ clean: true }); }
-          d.close(); A.toast('Yedek indirildi'); A.render();
+          const fname = `eslestirme-yedek-${nm}-${today()}.json`, pii = o.includePII;
+          d.close(); A.render();
+          A.dialog(`<h3>Yedek hazır</h3><p style="margin-top:0"><b>${esc(fname)}</b></p>
+            <p><b>Nerede:</b> ${esc(A.saveWhere())}</p>
+            ${pii ? '<div class="note"><b>Bu dosyada TC kimlik ve telefon bilgileri var.</b> Kişisel veridir; güvenli saklayın, başkalarıyla paylaşmayın.</div>' : '<p class="muted">Bu yedekte TC kimlik ve telefon bilgileri yok.</p>'}
+            <div class="row tight" style="margin-top:12px"><button class="b" data-close>Tamam</button></div>`);
         } catch (e) { A.fail(e); }
       };
     });
