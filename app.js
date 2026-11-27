@@ -4,7 +4,7 @@
   const A = window.App, { $, $$, esc, ACT, fmt, fmtDate } = A;
   const M = window.Model, S = window.Store, R = window.Rules, I = window.Importer, E = window.Engine;
   A.M = M; A.S = S; A.E = E;
-  A.VERSION = { no: 44, date: '27.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
+  A.VERSION = { no: 45, date: '27.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
 
   /* ------------------------------------------------------------- veri */
   const boot = S.load();
@@ -321,7 +321,7 @@
       <label class="drop" data-drop="wiFile"><input type="file" data-act="wiFile" accept=".xlsx,.xls,.csv" hidden><b>Excel dosyasını buraya bırakın</b><span>veya dokunup seçin (.xlsx, .xls, .csv · en çok 5 MB)</span></label>`;
     if (s) {
       h += `<div class="note ${s.res.errors.length && !s.res.players.length ? 'err' : 'ok'}"><b>${esc(s.name)}</b> <span class="pill ${s.res.info.mode === 'sablon' ? '' : 'warn'}">${s.res.info.mode === 'sablon' ? 'şablon biçimi' : 'tahmini eşleme'}</span>${s.sheets.length > 1 ? ` · sayfa: <select data-act="wiSheet" style="width:auto;display:inline-block">${s.sheets.map(n => `<option ${n === s.sheet ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>` : ''}<br>${s.res.info.rows} satır okundu · ${s.res.players.length} sporcu alındı · ${s.res.errors.length} hata · ${s.res.warnings.length} uyarı
-        <button class="b sm sec" data-act="wiClear" style="margin-left:8px">Dosyayı kaldır</button></div>${issues(s.res.errors, 'err')}${issues(s.res.warnings, 'warn')}`;
+        <button class="b sm sec" data-act="wiClear" style="margin-left:8px">Dosyayı kaldır</button></div>${s.res.players.length ? `<div class="note"><label>Ad / soyad okuma</label><select data-act="wiNm">${I.NAME_MODES.map(m => `<option value="${m[0]}" ${W.nm === m[0] ? 'selected' : ''}>${m[1]}</option>`).join('')}</select><div class="muted">Örnek (ad · soyad): ${esc(W.raw.slice(0, 3).map(p => p.ad + ' ' + p.soyad).join(' · '))}</div></div>` : ''}${issues(s.res.errors, 'err')}${issues(s.res.warnings, 'warn')}`;
     }
     h += `</div><div class="card"><h3>2) Elle sporcu ekle</h3>
       <div style="margin-bottom:8px"><label>Kategori (Gr)</label><input id="m_gr" list="grs" value="${esc(W.lastCat)}" placeholder="Örn. A KATEGORİSİ" maxlength="40"><datalist id="grs">${[...new Set(wizPlayers().map(p => p.src.gr).filter(Boolean))].map(g => `<option value="${esc(g)}">`).join('')}</datalist></div>
@@ -343,12 +343,13 @@
       if (!ok) { W.src = null; W.wb = null; W.raw = []; return; }
       ({ res, used } = pass(true));
     }
-    W.raw = res.players; W.raw.forEach(p => { p.id = M.uid(); p.kisiId = p.id; });
+    W.raw = res.players; W.nm = 'auto'; W.raw.forEach(p => { p.id = M.uid(); p.kisiId = p.id; });
     W.src = { name: (W.file && W.file.name) || 'dosya', sheet: used, sheets: wb.SheetNames, res };
     W.stay = new Set(); W.names = {}; W.off = new Set(); W.merges = [];
     if (res.errors.length && !res.players.length) A.toast(res.errors[0], 6000);
   }
   ACT.wiFile = async (el) => { const f = el.files && el.files[0]; if (!f) return; try { await readWizFile(f); } catch (e) { A.toast(e.message, 6000); } A.render(); };
+  ACT.wiNm = (el) => { W.nm = el.value; I.applyNameMode(W.raw, W.nm); A.render(); };
   ACT.wiSheet = async (el) => { try { await readWizFile(W.file, el.value); } catch (e) { A.toast(e.message); } A.render(); };
   ACT.wiClear = () => { W.src = null; W.wb = null; W.raw = []; W.stay = new Set(); A.render(); };
   ACT.wiRm = (el) => { W.manual = W.manual.filter(p => p.id !== el.dataset.a); A.render(); };

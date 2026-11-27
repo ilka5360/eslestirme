@@ -292,6 +292,7 @@
     const lo = years.length ? Math.min(...years) : '', hi = years.length ? Math.max(...years) : '';
     A.dialog(`<h3>İçe aktar: ${parsed.length} sporcu bulundu</h3><p class="muted">${esc(name || '')} · eşleme: <b>${res.info.mode === 'sablon' ? 'şablon biçimi' : 'tahmini'}</b> · ${res.errors.length} hata, ${res.warnings.length} uyarı. Tüm satırlar <b>${esc(CAT().name)}</b> kategorisine eklenir.</p>
       ${res.errors.length ? `<details class="iss err"><summary>${res.errors.length} hata (bu satırlar alınmadı)</summary><ul>${res.errors.slice(0, 30).map(x => `<li>${esc(x)}</li>`).join('')}</ul></details>` : ''}
+      <div style="margin-bottom:8px"><label>Ad / soyad okuma</label><select id="nmMode">${I.NAME_MODES.map(m => `<option value="${m[0]}">${m[1]}</option>`).join('')}</select><div class="muted" id="nmSample">${esc(parsed.slice(0, 3).map(p => p.ad + ' ' + p.soyad).join(' · '))}</div><small class="muted">Soyada göre sıralama için “Ad Soyad” doğru ayrılmalı: örnekte ilk sütun ad, ikinci soyad görünmelidir.</small></div>
       <p class="muted">İsterseniz doğum yılı aralığı verin (boş bırakırsanız hepsi alınır).</p>
       <div class="row"><div><label>Doğum yılı (en erken)</label><input id="y1" type="number" placeholder="${lo}"></div><div><label>Doğum yılı (en geç)</label><input id="y2" type="number" placeholder="${hi}"></div></div>
       <div id="cnt" class="note ok" style="margin-top:10px">${parsed.length} sporcu eklenecek</div>
@@ -299,6 +300,7 @@
       const sel = () => { const a = +$('#y1', d).value || 0, b = +$('#y2', d).value || 9999; return parsed.filter(p => (!a && b === 9999) ? true : (p.birthYear && p.birthYear >= a && p.birthYear <= b)); };
       const upd = () => { $('#cnt', d).textContent = sel().length + ' sporcu eklenecek'; };
       $('#y1', d).oninput = upd; $('#y2', d).oninput = upd;
+      $('#nmMode', d).onchange = (e) => { I.applyNameMode(parsed, e.target.value); $('#nmSample', d).textContent = parsed.slice(0, 3).map(p => p.ad + ' ' + p.soyad).join(' · '); };
       $('#ok', d).onclick = async () => { const l = sel(); d.close(); await A.snap('içe-aktarma'); const late = M.addPlayers(CAT(), l); A.save(); A.render(); A.toast(l.length + ' sporcu eklendi' + (late ? ' (' + late + ' sporcu 2. turdan itibaren)' : '')); };
     });
   }

@@ -163,7 +163,7 @@
       const key = fold(ad + soyad) + '|' + dt.birthDate + '|' + gr;
       if (seenKey.has(key)) out.warnings.push(`Satır ${xr}: aynı kategoride aynı ad+doğum tarihi (Satır ${seenKey.get(key)})`); else seenKey.set(key, xr);
       out.players.push({
-        ad, soyad, title, rating, elo, birthDate: dt.birthDate, birthYear: dt.birthYear, female,
+        _n: { isim: txt(g(r, 'isim')), ad, soyad }, ad, soyad, title, rating, elo, birthDate: dt.birthDate, birthYear: dt.birthYear, female,
         club: (txt(g(r, 'kulupname')) || txt(g(r, 'kulup'))).slice(0, 80), kulupNo: txt(g(r, 'kulupno')).slice(0, 12), tip: txt(g(r, 'tip')).slice(0, 20), kaynak: txt(g(r, 'kaynak')).slice(0, 40), atitle: up(g(r, 'atitle')).slice(0, 12), fed: up(g(r, 'fed')).replace(/\s+/g, ''), fideNo, tc, tel: normTel(g(r, 'tel')), src: { gr, row: xr },
       });
     }
@@ -176,6 +176,23 @@
 
   /* ----- çalışma kitabı okuma */
   function checkSize(size) { if (size > LIMITS.bytes) throw new Error(`Dosya çok büyük (${(size / 1048576).toFixed(1)} MB). En fazla ${LIMITS.bytes / 1048576} MB yüklenebilir.`); }
+  /** Ad/soyad okuma biçimi (önizlemede seçilir). 'auto': sütunlara göre; 'sa': "isim" = SOYAD AD; 'as': "isim" = AD SOYAD; 'swap': ad ile soyad yer değiştirir. */
+  function applyNameMode(list, mode) {
+    let k = 0;
+    list.forEach(p => {
+      const n = p._n; if (!n) return;
+      let ad = n.ad, soyad = n.soyad;
+      const t = String(n.isim || '').split(/\s+/).filter(Boolean);
+      if (mode === 'swap') { ad = n.soyad; soyad = n.ad; }
+      else if (mode === 'sa' && t.length > 1) { soyad = t[0]; ad = t.slice(1).join(' '); }
+      else if (mode === 'as' && t.length > 1) { soyad = t[t.length - 1]; ad = t.slice(0, -1).join(' '); }
+      ad = up(ad); soyad = up(soyad);
+      if (ad !== p.ad || soyad !== p.soyad) k++;
+      p.ad = ad; p.soyad = soyad;
+    });
+    return k;
+  }
+  const NAME_MODES = [['auto', 'Otomatik (dosyadaki Ad / Soyad sütunları)'], ['sa', '“isim” sütunu SOYAD AD biçiminde'], ['as', '“isim” sütunu AD SOYAD biçiminde'], ['swap', 'Ad ile soyadı yer değiştir']];
   function readWorkbook(X, buf, size) {
     checkSize(size == null ? (buf.byteLength || buf.length) : size);
     let wb;
@@ -218,6 +235,6 @@
     return { hits, missing, unused: list.filter(e => e.tel && !used.has(e)) };
   }
 
-  const API = { matchPhones, Template: Tpl, LIMITS, TITLES, fold, ALIAS, NAT_ALIAS, TEL_ALIAS, detectHeader, parseDate, parseRating, parseRegistration, tcValid, normTel, digits, up, txt, splitName, readWorkbook, sheetRows, parsePhoneSheets, serialToYMD };
+  const API = { applyNameMode, NAME_MODES, matchPhones, Template: Tpl, LIMITS, TITLES, fold, ALIAS, NAT_ALIAS, TEL_ALIAS, detectHeader, parseDate, parseRating, parseRegistration, tcValid, normTel, digits, up, txt, splitName, readWorkbook, sheetRows, parsePhoneSheets, serialToYMD };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.Importer = API;
 })(typeof window !== 'undefined' ? window : globalThis);
