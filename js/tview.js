@@ -131,9 +131,10 @@
   ACT.tbReset = guard(() => { const c = CAT(); c.settings[tbKey(c)] = E.DEFAULT_TB[M.sysOf(c)].slice(); A.save(); A.render(); });
 
   /* ============================================================= SPORCULAR */
+  const spSel = new Set(), spEdit = {};
   function vSpor(tn, c) {
     const n = c.players.length, locked = c.started && c.system === 'berger', canAdd = M.canAddPlayer(c);
-    const can = M.canDelete(c);
+    const can = M.canDelete(c), reo = M.canReorder(c), ed = reo && spEdit[c.id], sel = [...spSel].filter(id => c.players.some(p => p.id === id));
     const others = tn.cats.filter(x => x !== c && !x.rounds.length);
     const players = c.players.slice().sort((a, b) => (a.no || 9999) - (b.no || 9999) || E.startRating(b) - E.startRating(a));
     const other = {}; tn.cats.forEach(x => { if (x !== c) x.players.forEach(p => { (other[p.kisiId] = other[p.kisiId] || []).push(x.name); }); });
@@ -141,19 +142,24 @@
     <div class="card noprint"><div class="row tight">
       <button class="b" data-act="addP" ${canAdd ? '' : 'disabled'}>+ Sporcu ekle</button>
       <button class="b sec" data-act="fromT" ${canAdd ? '' : 'disabled'}>Başka kategoriden aktar</button>
+      ${can && n ? `<button class="b sec" data-act="spAll">${sel.length === n ? 'Seçimi kaldır' : 'Tümünü seç'}</button><button class="b red" data-act="delSel" ${sel.length ? '' : 'disabled'}>Seçilenleri sil${sel.length ? ' (' + sel.length + ')' : ''}</button>` : ''}
+      ${reo && n > 1 ? `<button class="b sec" data-act="spEdit">${ed ? '✓ Sıralamayı bitir' : '↕ Elle başlangıç sıralaması'}</button>` : ''}
+      ${reo && c.manualStart ? '<button class="b sec" data-act="spAuto" title="UKD/ELO, unvan, soyad kuralına döner">Otomatik sıralamaya dön</button>' : ''}
       <button class="b sec" data-act="print">Yazdır</button></div>
+      ${reo && c.manualStart ? '<div class="note info">Başlangıç sıralaması <b>elle</b> düzenlendi. Yeni eklenen sporcular listenin sonuna gelir; UKD/ELO değişse de sıra korunur.</div>' : ''}
+      ${ed ? '<div class="note info">Sporcunun <b>No</b> kutusuna yeni sırasını yazın veya ▲ ▼ ile kaydırın. İlk eşlendirmeden sonra sıralama kilitlenir.</div>' : ''}
       <div class="note ${can ? 'info' : ''}">${can ? 'Eşleştirme yapılmadığı için sporcular <b>silinebilir</b>. İlk eşleştirmeden sonra silme kapanır; sporcu “Çekilme” ile turnuvadan çekilir (listede kalır, kalan turlarda eşleşmez).' : 'Eşleştirme yapıldı: sporcu silinemez. Ayrılan sporcu için <b>“Çekilme”</b> kullanın (turnuvadan silinmez, kalan turlarda eşleşmez, ödül almaz).'}</div>
       ${!c.started ? `<div class="note info">Başlangıç sıralaması: <b>kuvvet puanı</b> (UKD/ELO’nun yükseği) → <b>unvan</b> → <b>alfabetik</b>. ${n > R.BERGER_MAX ? '' : 'Berger sisteminde numaralar <b>kura ile</b> verilir (başlatılırken). '}${n && n <= R.BERGER_MAX ? '<button class="b sm sec" data-act="drawB">Kura çek</button>' : ''}</div>` : ''}
       ${c.started && c.system === 'swiss' && !canAdd ? '<div class="note">Prosedür md.17(3): 2. tur eşlendirmesi duyurulduktan sonra yeni sporcu alınmaz.</div>' : ''}
       ${locked ? '<div class="note">Berger turnuvası başladı; sporcu listesi kilitli (çekilme yapılabilir).</div>' : ''}</div>
-    <div class="card"><div class="tblw fit"><table><tr><th class="n">No</th><th>Ad Soyad</th><th>Kulüp</th><th>Fed</th><th class="n">Doğum</th><th class="n">UKD</th><th class="n">ELO</th><th>FIDE No</th><th>Unvan</th><th>Durum</th><th class="noprint"></th></tr>
-    ${players.map(p => { const wd = p.status === 'withdrawn'; return `<tr class="${wd ? 'out' : ''}"><td class="n">${p.no || ''}</td><td><b>${esc(nmt(p))}</b>${p.female ? ' <span class="pill gray">K</span>' : ''}${other[p.kisiId] ? ` <span class="pill gray" title="${esc(other[p.kisiId].join(', '))}">+${other[p.kisiId].length} kategori</span>` : ''}</td>
+    <div class="card"><div class="tblw fit"><table><tr>${can ? '<th class="noprint"></th>' : ''}<th class="n">No</th><th>Ad Soyad</th><th>Kulüp</th><th>Fed</th><th class="n">Doğum</th><th class="n">UKD</th><th class="n">ELO</th><th>FIDE No</th><th>Unvan</th><th>Durum</th><th class="noprint"></th></tr>
+    ${players.map(p => { const wd = p.status === 'withdrawn'; return `<tr class="${wd ? 'out' : ''}">${can ? `<td class="noprint"><input type="checkbox" data-act="spChk" data-a="${p.id}" ${spSel.has(p.id) ? 'checked' : ''} aria-label="Seç"></td>` : ''}<td class="n">${ed ? `<input type="number" class="spno" min="1" max="${n}" value="${p.no}" data-act="spNo" data-a="${p.id}" style="width:58px;padding:4px" aria-label="Başlangıç no"> <button class="b sm sec" data-act="spUp" data-a="${p.id}" aria-label="Yukarı">▲</button><button class="b sm sec" data-act="spDn" data-a="${p.id}" aria-label="Aşağı">▼</button>` : (p.no || '')}</td><td><b>${esc(nmt(p))}</b>${p.female ? ' <span class="pill gray">K</span>' : ''}${other[p.kisiId] ? ` <span class="pill gray" title="${esc(other[p.kisiId].join(', '))}">+${other[p.kisiId].length} kategori</span>` : ''}</td>
       <td title="${esc(p.club)}">${esc(String(p.club || '').length > 25 ? String(p.club).slice(0, 25) + '…' : p.club)}</td><td>${esc(p.fed)}</td><td class="n">${esc(p.birthYear || '')}</td><td class="n">${p.rating || ''}</td><td class="n">${p.elo || ''}</td><td>${esc(p.fideNo)}</td><td>${esc(p.title || '')}</td>
       <td>${wd ? `<span class="pill err">çekildi${p.wdFrom ? ' (' + p.wdFrom + '. turdan)' : ''}</span>` : (p.joinRound > 1 ? '<span class="pill warn">' + p.joinRound + '. turdan</span>' : '<span class="pill">aktif</span>')}</td>
       <td class="noprint act-cell"><button class="b sm sec" data-act="editP" data-a="${p.id}" ${locked ? 'disabled' : ''}>Düzenle</button>
         ${others.length && can ? `<button class="b sm sec" data-act="moveP" data-a="${p.id}">Kategori</button>` : ''}
         ${wd ? `<button class="b sm sec" data-act="reactP" data-a="${p.id}">Geri al</button>` : (c.started && !can && c.system === 'swiss' ? `<button class="b sm red" data-act="wdP" data-a="${p.id}">Çekilme</button>` : '')}
-        ${can ? `<button class="b sm red" data-act="delP" data-a="${p.id}">Sil</button>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="11" class="muted">Henüz sporcu eklenmedi. Excel/CSV içe aktarın, tablodan yapıştırın veya tek tek ekleyin.</td></tr>'}
+        ${can ? `<button class="b sm red" data-act="delP" data-a="${p.id}">Sil</button>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="12" class="muted">Henüz sporcu eklenmedi. Excel/CSV içe aktarın, tablodan yapıştırın veya tek tek ekleyin.</td></tr>'}
     </table></div></div>
     <div class="row tight noprint wnav" style="margin-top:12px"><button class="b" data-act="goAyar" ${n < 3 ? 'disabled title="En az 3 sporcu gerekli"' : ''}>İleri → Tur ve zaman bilgileri</button></div>`;
   }
@@ -201,6 +207,20 @@
   ACT.editP = guard((el) => { const c = CAT(), p = pById(c, el.dataset.a); A.dialog(`<h3>Sporcuyu düzenle</h3>${pForm(p)}${c.started && c.rounds.length > 3 ? '<div class="note">4. turdan sonra başlangıç numarası değiştirilemez; puan değişikliği yalnızca görüntüyü etkiler.</div>' : ''}<div class="row tight" style="margin-top:14px"><button class="b" id="ok">Kaydet</button><button class="b sec" data-close>Vazgeç</button></div>`,
     d => { A.bindPII(d); $('#ok', d).onclick = () => { readForm(d, p); if (!p.ad && !p.soyad) return A.toast('Ad soyad boş olamaz'); refreshNumbers(c); A.save(); d.close(); A.render(); }; }); });
   function refreshNumbers(c) { if (c.started) { if (c.system === 'swiss' && c.rounds.length <= 3) M.renumber(c); } else if (!(c.bergerDrawn && c.players.length <= R.BERGER_MAX)) M.renumber(c); }
+  ACT.spChk = (el) => { if (el.checked) spSel.add(el.dataset.a); else spSel.delete(el.dataset.a); A.render(); };
+  ACT.spAll = () => { const c = CAT(), ids = c.players.map(p => p.id); if (ids.length && ids.every(id => spSel.has(id))) ids.forEach(id => spSel.delete(id)); else ids.forEach(id => spSel.add(id)); A.render(); };
+  ACT.delSel = guard(async () => {
+    const c = CAT(), ids = c.players.filter(p => spSel.has(p.id)).map(p => p.id); if (!ids.length) return;
+    if (!(await A.ask(`Seçilen ${ids.length} sporcu silinsin mi? (Eşleştirme yapılmadığı için silinebilir; geri alınamaz, yedek alınır.)`, { ok: `${ids.length} sporcuyu sil`, danger: true }))) return;
+    let k; try { await A.snap('toplu-silme'); k = M.deletePlayers(c, ids); } catch (e) { return A.toast(e.message); }
+    ids.forEach(id => spSel.delete(id)); A.save(); A.render(); A.toast(k + ' sporcu silindi');
+  });
+  ACT.spEdit = () => { const c = CAT(); spEdit[c.id] = !spEdit[c.id]; A.render(); };
+  const reorder = (id, f) => { const c = CAT(), p = pById(c, id); if (!p) return; try { M.moveStart(c, id, f(p)); } catch (e) { return A.toast(e.message); } A.save(); A.render(); };
+  ACT.spNo = guard((el) => reorder(el.dataset.a, () => +el.value));
+  ACT.spUp = guard((el) => reorder(el.dataset.a, p => p.no - 1));
+  ACT.spDn = guard((el) => reorder(el.dataset.a, p => p.no + 1));
+  ACT.spAuto = guard(async () => { const c = CAT(); if (!(await A.ask('Elle yapılan sıralama silinip UKD/ELO → unvan → soyad kuralına dönülsün mü?', { ok: 'Otomatiğe dön' }))) return; try { M.autoStart(c); } catch (e) { return A.toast(e.message); } A.save(); A.render(); A.toast('Otomatik sıralama uygulandı'); });
   ACT.delP = guard(async (el) => {
     const c = CAT(), p = pById(c, el.dataset.a);
     if (!(await A.ask(`${nm(p)} silinsin mi? (Eşleştirme yapılmadığı için silinebilir; geri alınamaz.)`, { ok: 'Sil', danger: true }))) return;
