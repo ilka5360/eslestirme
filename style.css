@@ -263,3 +263,33 @@ label.b.sm{padding:6px 12px;min-height:38px}
 [data-tip]:hover::after,[data-tip]:focus-visible::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);right:0;background:#222;color:#fff;font:600 12px/1.3 system-ui,sans-serif;padding:5px 8px;border-radius:6px;white-space:nowrap;z-index:50;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 td:first-child [data-tip]:hover::after{right:auto;left:0}
 @media print{.ib{display:none}}
+
+/* v55 telefon: sporcu listesi kart satırı, sıralama yatay kaydırma + sabit ad sütunu */
+@media (max-width:760px){
+  table.sp{display:block}
+  table.sp tbody{display:block}
+  table.sp tr:first-child{display:none}
+  table.sp tr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:10px 4px;border-bottom:1px solid #dfe6dc}
+  .tblw.fit table.sp td{display:block;border:0;padding:0;white-space:normal;overflow-wrap:normal;font-size:14px}
+  .tblw.fit table.sp td.c-chk{order:0}
+  .tblw.fit table.sp td.c-no{order:1;min-width:24px;font-weight:700;color:#5a6a58}
+  .tblw.fit table.sp td.c-nm{order:2;flex:1 1 0;min-width:0;font-size:15px;word-break:normal;overflow-wrap:break-word}
+  .tblw.fit table.sp td.c-st{order:3}
+  .tblw.fit table.sp td.c-club{order:4;flex:0 0 100%;color:#4a5a48;font-size:13px;padding-left:34px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tblw.fit table.sp td.c-yr{order:5}table.sp td.c-ukd{order:6}table.sp td.c-elo{order:7}
+  .tblw.fit table.sp td[data-l]{font-size:13px;color:#333;margin-left:0}
+  .tblw.fit table.sp td[data-l]:empty{display:none}
+  .tblw.fit table.sp td[data-l]::before{content:attr(data-l) " ";color:#7b8a79;font-size:11px;font-weight:600}
+  .tblw.fit table.sp td.c-yr{padding-left:34px}
+  .tblw.fit table.sp td.act-cell{order:8;margin-left:auto;display:flex;gap:6px;white-space:nowrap}
+  .tblw.fit table.sp td.act-cell .ib{margin:0}
+  .tblw.fit table.sp td.act-cell:empty{display:none}
+
+  .tblw.fit:has(table.st){overflow-x:auto}
+  table.st{width:max-content;min-width:100%}
+  table.st th,table.st td{white-space:nowrap!important;overflow-wrap:normal!important;padding:7px 8px}
+  table.st .ph{display:none}
+  table.st th:first-child,table.st td:first-child{position:sticky;left:0;z-index:2;background:#fff;min-width:36px}
+  table.st th:nth-child(3),table.st td.c-nm{position:sticky;left:36px;z-index:2;background:#fff;box-shadow:2px 0 0 #dfe6dc}
+  table.st th{background:#eef3ec}table.st tr.out td{background:#fff}
+}
