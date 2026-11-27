@@ -237,3 +237,5 @@ label.b.sm{padding:6px 12px;min-height:38px}
 @media print{.flow{display:none}}
 
 .brand .logo{width:36px;height:36px;border-radius:9px;flex:0 0 auto}
+/* v49: üst çubuk içeriği sayfa içeriğiyle (main, 1180px) aynı hizada */
+.top{padding-left:max(12px,calc((100% - 1180px)/2 + 12px));padding-right:max(12px,calc((100% - 1180px)/2 + 12px))}
