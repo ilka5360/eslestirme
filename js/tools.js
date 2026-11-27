@@ -27,7 +27,7 @@
 
   /* ============================================================= KAYIT KONTROL */
   const kkS = {};
-  const kst = (tn) => (kkS[tn.id] = kkS[tn.id] || { cats: null, header: true, blank: 0, phone: false, withdrawn: false, phones: null });
+  const kst = (tn) => (kkS[tn.id] = kkS[tn.id] || { cats: null, header: true, blank: 0, phone: true, withdrawn: false, phones: null });
   A.views.kayit = (ctx) => {
     const r = ready(ctx, 'Kayıt Kontrol'); if (r.stop) return r.stop;
     const { tn } = ctx, st = kst(tn), sel = st.cats || new Set(tn.cats.map(c => c.id));
@@ -63,7 +63,7 @@
       const tb = document.createElement('table'); const hd = tb.createTHead().insertRow();
       ['No', 'Ad', 'Soyad', 'İl', 'Telefon', 'İmza / Not'].forEach(x => { const th = document.createElement('th'); th.textContent = x; hd.appendChild(th); });
       const body = tb.createTBody(); const ps = kkPlayers(c, st);
-      for (let i = 0; i < ps.length + st.blank; i++) { const p = ps[i], r = body.insertRow(); [i + 1, p ? p.ad : '', p ? p.soyad : '', p ? kkClub(p.club) : '', '', ''].forEach(x => { r.insertCell().textContent = x; }); }
+      for (let i = 0; i < ps.length + st.blank; i++) { const p = ps[i], r = body.insertRow(); [i + 1, p ? p.ad : '', p ? p.soyad : '', p ? kkClub(p.club) : '', p && st.phone ? telFmt(p.tel) : '', ''].forEach(x => { r.insertCell().textContent = x; }); }
       sec.appendChild(tb); root.appendChild(sec);
     });
     A.setPrint(root); A.doPrint();
