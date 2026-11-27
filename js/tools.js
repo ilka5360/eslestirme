@@ -225,7 +225,7 @@
           <td class="n">${x.oldElo || '–'}${x.newElo != null ? ' → <b>' + x.newElo + '</b>' : ''}</td></tr>`; }).join('')}</table></div>
         <div class="row tight noprint" style="margin-top:12px"><button class="b big" data-act="rkApply" ${sel ? '' : 'disabled'}>Seçilenleri uygula (${sel})</button></div>${!sel && lockedN ? `<div class="note">${lockedN} sporcunun kategorisinde eşleştirme yapıldığı için güncelleme yapılamaz (turnuva başladıktan sonra UKD değişikliği engellenir).</div>` : ''}</div>`;
     }
-    if (tn.lastRatingBatch) h += `<div class="card noprint"><b>Son uygulama</b> <span class="muted">${esc(A.ago(tn.lastRatingAt))}</span> <button class="b sm sec" data-act="rkUndo" style="margin-left:8px">Geri al</button></div>`;
+    if (tn.lastRatingBatch) h += `<div class="card noprint"><b>Son uygulama</b> <span class="muted">${esc(A.ago(tn.lastRatingAt))}</span> ${A.ib('rkUndo', null, 'undo', 'Son uygulamayı geri al', 'sec', 'style="margin-left:8px"')}</div>`;
     const P = db.prefs;
     h += `<div class="card"><h3>${st.nat ? '3' : '2'}) Sporcu başına bağlantılar</h3><p class="muted" style="margin-top:0">Bağlantılar yeni sekmede açılır; uygulama hiçbir bilgiyi otomatik göndermez. TSF bağlantısı UKD sorgulama sayfasına gider; FIDE sayfası için sporcunun FIDE No’su gerekir.</p>
       <div class="row noprint"><div><label>FIDE profil adresi şablonu <small class="muted">({fideNo})</small></label><input data-act="prefUrl" data-a="fideUrlTpl" value="${esc(P.fideUrlTpl)}" maxlength="200" placeholder="https://ratings.fide.com/profile/{fideNo}"></div></div>

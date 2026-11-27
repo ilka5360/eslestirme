@@ -4,7 +4,7 @@
   const A = window.App, { $, $$, esc, ACT, fmt, fmtDate } = A;
   const M = window.Model, S = window.Store, R = window.Rules, I = window.Importer, E = window.Engine;
   A.M = M; A.S = S; A.E = E;
-  A.VERSION = { no: 53, date: '27.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
+  A.VERSION = { no: 54, date: '27.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
 
   /* ------------------------------------------------------------- veri */
   const boot = S.load();
@@ -120,7 +120,21 @@
   const yearOf = (d) => +String(d || '').slice(0, 4) || new Date().getFullYear();
   const sorted = () => Object.values(DB.tournaments).sort((a, b) => (b.info.date || '').localeCompare(a.info.date || '') || b.created - a.created);
   const catLine = (c) => { const tr = M.totalRounds(c); return `<span class="chip" title="${esc(c.name)}"><b>${esc(c.short || c.name)}</b> ${c.players.length}${tr ? ' · ' + tr + ' tur' : ''}${c.started ? ' · ' + M.completedRounds(c) + '/' + tr : ''}</span>`; };
-  const statusPill = (tn) => ({ aktif: '<span class="pill">aktif</span>', tamamlandi: '<span class="pill warn">tamamlandı</span>', arsiv: '<span class="pill gray">arşiv</span>' }[tn.status]);
+  /* v54: simge düğmeleri — metin yerine simge, üzerine gelince/odaklanınca açıklama (data-tip) */
+  const ICO = {
+    edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>',
+    move: '<path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M12 11v5M9.5 13.5L12 11l2.5 2.5"/>',
+    undo: '<path d="M3 7v6h6"/><path d="M3 13a9 9 0 103-6.7L3 9"/>',
+    wd: '<path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M17 8l5 5M22 8l-5 5"/>',
+    del: '<path d="M3 6h18"/><path d="M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/>',
+    ok: '<path d="M20 6L9 17l-5-5"/>',
+    x: '<path d="M18 6L6 18M6 6l12 12"/>',
+    arch: '<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 001 1h12a1 1 0 001-1V8M10 12h4"/>'
+  };
+  A.ico = (n) => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICO[n] || ''}</svg>`;
+  A.ib = (act, id, icon, tip, cls, extra) => `<button class="b sm ib ${cls || 'sec'}" data-act="${act}"${id != null ? ` data-a="${id}"` : ''} data-tip="${esc(tip)}" aria-label="${esc(tip)}" ${extra || ''}>${A.ico(icon)}</button>`;
+  A.stIco = (icon, tip, cls) => `<span class="sti ${cls || ''}" data-tip="${esc(tip)}" role="img" aria-label="${esc(tip)}" tabindex="0">${A.ico(icon)}</span>`;
+  const statusPill = (tn) => ({ aktif: A.stIco('ok', 'Aktif'), tamamlandi: A.stIco('ok', 'Tamamlandı', 'warn'), arsiv: A.stIco('arch', 'Arşiv', 'gray') }[tn.status]);
   const progress = (tn) => { let d = 0, t = 0; tn.cats.forEach(c => { const tr = M.totalRounds(c); if (tr) { t += tr; d += Math.min(M.completedRounds(c), tr); } }); return t ? Math.round(d * 100 / t) : 0; };
 
   /* ============================================================= DASHBOARD */
@@ -135,7 +149,7 @@
       <p class="muted ver" style="text-align:right;margin:4px 2px 0;font-size:12px">Sürüm v${A.VERSION.no} • ${A.VERSION.date} <button class="b sm sec" data-act="chkUpd" style="margin-left:6px">Güncellemeyi denetle</button></p>
       <div class="stats"><div><b>${act.length}</b><small>Aktif turnuva</small></div><div><b>${pl}</b><small>Sporcu</small></div><div><b>${kc}</b><small>Kategori</small></div><div><b>${arch.length}</b><small>Arşiv</small></div></div>`;
     if (need) h += `<div class="note bn"><span>${DB.lastBackup ? 'Son yedek: ' + A.ago(DB.lastBackup) + ' ve sonrasında değişiklik yapıldı.' : 'Henüz yedek almadınız.'} Tarayıcı verisi silinirse turnuvalar kaybolur.</span><button class="b sm" data-act="backup">Yedek al</button></div>`;
-    if (wizHasData() && (W.raw.length || W.manual.length || W.step > 1)) h += `<div class="note info bn"><span><b>Yarım kalan turnuva:</b> “${esc(W.info.name || 'adsız')}” (${W.raw.length + W.manual.length} sporcu, ${W.step}. adım)</span><span class="row tight"><a class="b sm" href="#/yeni">Devam et</a><button class="b sm sec" data-act="wiDrop">Sil</button></span></div>`;
+    if (wizHasData() && (W.raw.length || W.manual.length || W.step > 1)) h += `<div class="note info bn"><span><b>Yarım kalan turnuva:</b> “${esc(W.info.name || 'adsız')}” (${W.raw.length + W.manual.length} sporcu, ${W.step}. adım)</span><span class="row tight"><a class="b sm" href="#/yeni">Devam et</a>${A.ib('wiDrop', null, 'del', 'Yarım kalan turnuvayı sil', 'red')}</span></div>`;
     h += '<h2>Aktif turnuvalar</h2>';
     if (!act.length) h += `<div class="empty board"><div><h3>${all.length ? 'Aktif turnuva yok' : 'İlk turnuvanı oluştur'}</h3><p class="muted">Sporcu kayıt Excel’ini yükleyin; kategoriler ve sporcular otomatik oluşur.</p><a class="b big" href="#/yeni">Turnuva oluştur</a></div></div>`;
     act.forEach(tn => {
@@ -243,7 +257,7 @@
   ACT.snaps = async () => {
     const l = await S.listSnaps();
     A.dialog(`<h3>Anlık yedekler</h3><p class="muted">Önemli işlemlerden önce bu tarayıcıda otomatik alınır (son 5). Tarayıcı verisi silinirse bunlar da silinir.</p>
-      ${l.length ? `<table><tr><th>Zaman</th><th>Neden</th><th class="n">KB</th><th></th></tr>${l.map(x => `<tr><td>${esc(new Date(x.at).toLocaleString('tr-TR'))}</td><td>${esc(x.reason)}</td><td class="n">${Math.round(x.size / 1024)}</td><td><button class="b sm sec" data-act="restoreSnap" data-a="${x.id}">Geri yükle</button></td></tr>`).join('')}</table>` : '<div class="note">Henüz anlık yedek yok.</div>'}
+      ${l.length ? `<table><tr><th>Zaman</th><th>Neden</th><th class="n">KB</th><th></th></tr>${l.map(x => `<tr><td>${esc(new Date(x.at).toLocaleString('tr-TR'))}</td><td>${esc(x.reason)}</td><td class="n">${Math.round(x.size / 1024)}</td><td>${A.ib('restoreSnap', x.id, 'undo', 'Bu yedeğe geri yükle')}</td></tr>`).join('')}</table>` : '<div class="note">Henüz anlık yedek yok.</div>'}
       <div class="row tight" style="margin-top:10px"><button class="b sec" data-close>Kapat</button></div>`, d => A.bind(d));
   };
   ACT.restoreSnap = async (el) => {
@@ -545,7 +559,7 @@
       <div class="row" style="margin-top:10px">${inf('web', 'İnternet sayfası')}${inf('email', 'E-posta')}<div><label>Yaş hesabı yılı</label><input type="number" data-act="info" data-a="refYear" value="${tn.info.refYear || yearOf(tn.info.date)}" min="1990" max="2100"></div></div></div>
       <h2>Kategoriler</h2><div class="card"><table><tr><th>Kategori</th><th class="n">Sporcu</th><th class="n">Tur</th><th>Durum</th><th></th></tr>
       ${tn.cats.map(c => `<tr><td><input value="${esc(c.name)}" data-act="catName" data-a="${c.id}" maxlength="40" aria-label="Kategori adı"></td><td class="n">${c.players.length}</td><td class="n">${M.totalRounds(c) || '—'}</td><td>${c.started ? (M.completedRounds(c) >= M.totalRounds(c) && M.totalRounds(c) ? 'bitti' : M.completedRounds(c) + '. tur bitti') : 'başlamadı'}</td>
-        <td style="text-align:right"><button class="b sm red" data-act="delCat" data-a="${c.id}" ${M.canDelete(c) ? '' : 'disabled title="Eşleştirmesi yapılmış kategori silinemez"'}>Sil</button></td></tr>`).join('') || '<tr><td colspan="5" class="muted">Kategori yok</td></tr>'}</table>
+        <td style="text-align:right">${A.ib('delCat', c.id, 'del', M.canDelete(c) ? 'Kategoriyi sil' : 'Eşleştirmesi yapılmış kategori silinemez', 'red', M.canDelete(c) ? '' : 'disabled')}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Kategori yok</td></tr>'}</table>
       <div style="margin-top:10px"><button class="b" data-act="addCat">+ Kategori ekle</button></div></div>
       <h2>Durum</h2><div class="card"><p style="margin-top:0">Durum: ${statusPill(tn)} ${M.allDone(tn) && tn.status === 'aktif' ? '<span class="pill">tüm kategoriler bitti</span>' : ''}</p>
       <div class="row tight"><button class="b sec" data-act="setSt" data-a="${tn.id}|tamamlandi" ${tn.status === 'tamamlandi' ? 'disabled' : ''}>Tamamlandı olarak işaretle</button>

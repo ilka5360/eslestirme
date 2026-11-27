@@ -1,4 +1,4 @@
-const V = 'eslestirme-v53';
+const V = 'eslestirme-v54';
 const FILES = ['./', 'index.html', 'style.css', 'app.js', 'engine.js', 'js/rules.js', 'js/model.js', 'js/template.js', 'js/importer.js', 'js/yonerge.js', 'vendor/pdf.min.js', 'vendor/pdf.worker.min.js', 'js/ratingmatch.js', 'js/xlsxout.js', 'js/cards.js', 'js/store.js', 'js/ui.js', 'js/native.js', 'js/tview.js', 'js/tools.js', 'logo-tsf.jpg', 'logo-bakanlik.png',
   'vendor/xlsx.min.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => {

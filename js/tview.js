@@ -156,11 +156,11 @@
     <div class="card"><div class="tblw fit"><table><tr>${can ? '<th class="noprint"></th>' : ''}<th class="n">No</th><th>Soyad Ad</th><th>Kulüp</th><th class="opt">Fed</th><th class="n">Doğum</th><th class="n">UKD</th><th class="n">ELO</th><th class="opt">FIDE No</th><th class="opt">Unvan</th><th>Durum</th><th class="noprint"></th></tr>
     ${players.map(p => { const wd = p.status === 'withdrawn'; return `<tr class="${wd ? 'out' : ''}">${can ? `<td class="noprint"><input type="checkbox" data-act="spChk" data-a="${p.id}" ${spSel.has(p.id) ? 'checked' : ''} aria-label="Seç"></td>` : ''}<td class="n">${p.no || ''}</td><td><b>${esc(nmt(p))}</b>${p.female ? ' <span class="pill gray">K</span>' : ''}${other[p.kisiId] ? ` <span class="pill gray" title="${esc(other[p.kisiId].join(', '))}">+${other[p.kisiId].length} kategori</span>` : ''}</td>
       <td title="${esc(p.club)}">${esc(clubS(p.club))}</td><td class="opt">${esc(p.fed)}</td><td class="n">${esc(p.birthYear || '')}</td><td class="n">${p.rating || ''}</td><td class="n">${p.elo || ''}</td><td class="opt">${esc(p.fideNo)}</td><td class="opt">${esc(p.title || '')}</td>
-      <td>${wd ? `<span class="pill err">çekildi${p.wdFrom ? ' (' + p.wdFrom + '. turdan)' : ''}</span>` : (p.joinRound > 1 ? '<span class="pill warn">' + p.joinRound + '. turdan</span>' : '<span class="pill">aktif</span>')}</td>
-      <td class="noprint act-cell"><button class="b sm sec" data-act="editP" data-a="${p.id}" ${locked ? 'disabled' : ''}>Düzenle</button>
-        ${others.length && can ? `<button class="b sm sec" data-act="moveP" data-a="${p.id}">Kategori</button>` : ''}
-        ${wd ? `<button class="b sm sec" data-act="reactP" data-a="${p.id}">Geri al</button>` : (c.started && !can && c.system === 'swiss' ? `<button class="b sm red" data-act="wdP" data-a="${p.id}">Çekilme</button>` : '')}
-        ${can ? `<button class="b sm red" data-act="delP" data-a="${p.id}">Sil</button>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="12" class="muted">Henüz sporcu eklenmedi. Excel/CSV içe aktarın, tablodan yapıştırın veya tek tek ekleyin.</td></tr>'}
+      <td>${wd ? A.stIco('x', 'Çekildi' + (p.wdFrom ? ' (' + p.wdFrom + '. turdan)' : ''), 'err') : (p.joinRound > 1 ? '<span class="pill warn">' + p.joinRound + '. turdan</span>' : A.stIco('ok', 'Aktif'))}</td>
+      <td class="noprint act-cell">${A.ib('editP', p.id, 'edit', 'Düzenle', 'sec', locked ? 'disabled' : '')}
+        ${others.length && can ? A.ib('moveP', p.id, 'move', 'Kategori değiştir') : ''}
+        ${wd ? A.ib('reactP', p.id, 'undo', 'Çekilmeyi geri al') : (c.started && !can && c.system === 'swiss' ? A.ib('wdP', p.id, 'wd', 'Turnuvadan çekil', 'red') : '')}
+        ${can ? A.ib('delP', p.id, 'del', 'Sporcuyu sil', 'red') : ''}</td></tr>`; }).join('') || '<tr><td colspan="12" class="muted">Henüz sporcu eklenmedi. Excel/CSV içe aktarın, tablodan yapıştırın veya tek tek ekleyin.</td></tr>'}
     </table></div></div>
     <div class="row tight noprint wnav" style="margin-top:12px"><button class="b" data-act="goAyar" ${n < 3 ? 'disabled title="En az 3 sporcu gerekli"' : ''}>İleri → Tur ve zaman bilgileri</button></div>`;
   }
