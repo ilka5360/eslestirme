@@ -1,0 +1,7 @@
+{
+  "appId": "com.eslestirme.esle",
+  "appName": "Eşle",
+  "webDir": "www",
+  "backgroundColor": "#0f2a24",
+  "android": { "allowMixedContent": false }
+}

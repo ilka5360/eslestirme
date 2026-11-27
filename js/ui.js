@@ -74,14 +74,15 @@
       const html = '<!DOCTYPE html>\n<html lang="tr">' + clone.innerHTML + '</html>';
       const name = 'yazdir-' + new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-') + '.html';
       const file = new File([html], name, { type: 'text/html' });
+      if (A.native) { await A.shareBlob(file, name); return; }
       if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Eşleştirme – yazdır' }); return; }
       const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     } catch (e) { if (e && e.name === 'AbortError') return; A.toast('Dosya hazırlanamadı: ' + (e.message || e), 5000); }
   };
   A.doPrint = () => {
-    if (iosStandalone()) {
-      A.dialog(`<h3>Yazdır</h3><p>iPhone’da ana ekran uygulaması doğrudan yazdırmayı desteklemez.</p>
-        <ol style="padding-left:18px;margin:8px 0"><li><b>Yazdırılabilir dosyayı hazırla</b>’ya dokunun.</li><li>Açılan listeden <b>Dosyalara Kaydet</b> seçin (veya AirDrop ile bilgisayara gönderin).</li><li>Dosyayı Safari’de açın; yazdırma penceresi kendiliğinden açılır (Paylaş → Yazdır).</li></ol>
+    if (iosStandalone() || A.native) {
+      A.dialog(`<h3>Yazdır</h3><p>${A.native ? 'Android uygulamasından doğrudan yazdırma yapılamaz; sayfa bir dosya olarak paylaşılır.' : 'iPhone’da ana ekran uygulaması doğrudan yazdırmayı desteklemez.'}</p>
+        <ol style="padding-left:18px;margin:8px 0"><li><b>Yazdırılabilir dosyayı hazırla</b>’ya dokunun.</li><li>Açılan listeden <b>Dosyalara Kaydet</b> seçin (veya AirDrop ile bilgisayara gönderin).</li><li>${A.native ? 'Dosyayı Chrome’da açın (paylaşma listesinden Chrome’u seçin); yazdırma penceresi kendiliğinden açılır.' : 'Dosyayı Safari’de açın; yazdırma penceresi kendiliğinden açılır (Paylaş → Yazdır).'}</li></ol>
         <div class="row tight"><button class="b" id="pf_ok">Yazdırılabilir dosyayı hazırla</button><button class="b sec" data-close>Kapat</button></div>`, d => { $('#pf_ok', d).onclick = () => { A.printFile(); }; });
       return;
     }
