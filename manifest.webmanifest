@@ -1,6 +1,6 @@
 {
-  "name": "Eşleştirme – Satranç Turnuva Yöneticisi",
-  "short_name": "Eşleştirme",
+  "name": "Eşle – Satranç Turnuva Yöneticisi",
+  "short_name": "Eşle",
   "description": "İsviçre ve Berger eşlendirme, eşitlik bozma ve sıralama",
   "lang": "tr",
   "start_url": "./index.html",

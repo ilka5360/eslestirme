@@ -32,7 +32,7 @@
       if (o.header) { aoa.push(['No', 'Ad', 'Soyad', 'İl', 'Telefon', 'İmza / Not'].map(h => ({ v: h, t: 's', s: { font: font(12, true), border: BORDER, fill: { fgColor: { rgb: 'E8EFE8' } }, alignment: { horizontal: 'center', vertical: 'center' } } }))); rowsMeta.push({ hpt: 21 }); }
       ps.forEach((p, i) => {
         const tel = o.phone === false ? '' : (p.tel || '');
-        aoa.push([cell(i + 1, true, '0', true), cell(p.ad), cell(p.soyad), cell(p.club), cell(tel, true, PHONE_FMT), cell('')]); rowsMeta.push({ hpt: 21 });
+        aoa.push([cell(i + 1, true, '0', true), cell(p.ad), cell(p.soyad), cell(String(p.club || '').slice(0, 25)), cell(tel, true, PHONE_FMT), cell('')]); rowsMeta.push({ hpt: 21 });
       });
       for (let k = 0; k < (o.blank || 0); k++) { aoa.push([cell(ps.length + k + 1, true, '0', true), cell(''), cell(''), cell(''), cell(''), cell('')]); rowsMeta.push({ hpt: 21 }); }
       const ws = X.utils.aoa_to_sheet(aoa);

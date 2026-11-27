@@ -27,7 +27,7 @@
 
   /* ============================================================= KAYIT KONTROL */
   const kkS = {};
-  const kst = (tn) => (kkS[tn.id] = kkS[tn.id] || { cats: null, header: true, blank: 0, phone: true, withdrawn: false, phones: null });
+  const kst = (tn) => (kkS[tn.id] = kkS[tn.id] || { cats: null, header: true, blank: 0, phone: false, withdrawn: false, phones: null });
   A.views.kayit = (ctx) => {
     const r = ready(ctx, 'Kayıt Kontrol'); if (r.stop) return r.stop;
     const { tn } = ctx, st = kst(tn), sel = st.cats || new Set(tn.cats.map(c => c.id));
@@ -36,17 +36,13 @@
     let h = r.h + `<div class="card noprint"><h3>Kategoriler</h3><div class="chips">${tn.cats.map(c => `<label class="chk chip2"><input type="checkbox" data-act="kkCat" data-a="${c.id}" ${sel.has(c.id) ? 'checked' : ''}> ${esc(c.name)} <span class="muted">${c.players.length}</span></label>`).join('') || '<span class="muted">Kategori yok</span>'}</div>
       <h3 style="margin-top:14px">Seçenekler</h3><div class="row">
       <label class="chk"><input type="checkbox" data-act="kkOpt" data-a="header" ${st.header ? 'checked' : ''}> Başlık satırı ekle (No, Ad, Soyad, İl, Telefon, İmza)</label>
-      <label class="chk"><input type="checkbox" data-act="kkOpt" data-a="phone" ${st.phone ? 'checked' : ''}> Telefon sütununu doldur</label>
       <label class="chk"><input type="checkbox" data-act="kkOpt" data-a="withdrawn" ${st.withdrawn ? 'checked' : ''}> Çekilenleri de ekle</label>
       <div style="flex:0 1 160px"><label>Sonuna boş satır</label><input type="number" min="0" max="50" value="${st.blank}" data-act="kkBlank"></div></div>
       <div class="row tight" style="margin-top:12px"><button class="b big" data-act="kkXlsx" ${chosen.length ? '' : 'disabled'}>⬇ Excel indir (.xlsx)</button><button class="b sec big" data-act="kkPrint" ${chosen.length ? '' : 'disabled'}>🖨 Yazdır / PDF</button></div>
-      <p class="muted" style="margin:8px 0 0">Her kategori ayrı sayfa (sayfa adı = kategori). Sporcular Ad’a göre alfabetik sıralanır. Telefon: ${withTel}/${total} sporcuda kayıtlı.</p></div>
-      <div class="card noprint"><h3>Telefon eşleme <small class="muted">(isteğe bağlı)</small></h3><p class="muted" style="margin-top:0">Sporcu kayıt Excel’inde Telefon / TEL / GSM sütunu varsa telefonlar listeyle birlikte otomatik alınır. Eksik olanlar için telefonların bulunduğu dolu Kayıt Kontrol Excel’ini yükleyin; ad+soyad ile eşleştirilir (telefonlar yalnızca bu cihazda saklanır, yedeğe varsayılan eklenmez).</p>
-      <label class="drop small"><input type="file" data-act="kkPhoneFile" accept=".xlsx,.xls,.csv" hidden><b>Dolu Kayıt Kontrol Excel’ini seç</b></label></div>
-      <div class="card"><h3>Önizleme</h3>${chosen.map(c => `<h4 style="margin:10px 0 4px">${esc(XO.kkTitle(c.name))} <span class="muted">(${kkPlayers(c, st).length} sporcu)</span></h4><div class="tblw"><table class="kkp"><tr><th class="n">No</th><th>Ad</th><th>Soyad</th><th>İl</th><th>Telefon</th></tr>
-      ${kkPlayers(c, st).slice(0, 10).map((p, i) => `<tr><td class="n">${i + 1}</td><td>${esc(p.ad)}</td><td>${esc(p.soyad)}</td><td>${esc(p.club)}</td><td>${st.phone ? esc(telFmt(p.tel)) : ''}</td></tr>`).join('')}</table></div>`).join('') || '<div class="muted">Kategori seçin.</div>'}</div>`;
+      <p class="muted" style="margin:8px 0 0">Her kategori ayrı sayfa (sayfa adı = kategori). Sporcular Ad’a göre alfabetik sıralanır. İl sütunu en çok 25 karakterdir.</p></div>`;
     return h;
   };
+  const kkClub = (c) => String(c || '').slice(0, 25);   // İl/kulüp sütunu en çok 25 karakter
   const kkPlayers = (c, st) => c.players.filter(p => st.withdrawn || p.status !== 'withdrawn').slice().sort((a, b) => collator.compare(a.ad, b.ad) || collator.compare(a.soyad, b.soyad));
   const telFmt = (t) => (t && t.length === 10 ? `(${t.slice(0, 3)}) ${t.slice(3, 6)}-${t.slice(6)}` : t || '');
   ACT.kkCat = (el) => { const { tn } = A.ctx(), st = kst(tn); const s = st.cats || new Set(tn.cats.map(c => c.id)); if (el.checked) s.add(el.dataset.a); else s.delete(el.dataset.a); st.cats = s; A.render(); };
@@ -67,7 +63,7 @@
       const tb = document.createElement('table'); const hd = tb.createTHead().insertRow();
       ['No', 'Ad', 'Soyad', 'İl', 'Telefon', 'İmza / Not'].forEach(x => { const th = document.createElement('th'); th.textContent = x; hd.appendChild(th); });
       const body = tb.createTBody(); const ps = kkPlayers(c, st);
-      for (let i = 0; i < ps.length + st.blank; i++) { const p = ps[i], r = body.insertRow(); [i + 1, p ? p.ad : '', p ? p.soyad : '', p ? p.club : '', p && st.phone ? telFmt(p.tel) : '', ''].forEach(x => { r.insertCell().textContent = x; }); }
+      for (let i = 0; i < ps.length + st.blank; i++) { const p = ps[i], r = body.insertRow(); [i + 1, p ? p.ad : '', p ? p.soyad : '', p ? kkClub(p.club) : '', '', ''].forEach(x => { r.insertCell().textContent = x; }); }
       sec.appendChild(tb); root.appendChild(sec);
     });
     A.setPrint(root); A.doPrint();

@@ -4,7 +4,7 @@
   const A = window.App, { $, $$, esc, ACT, fmt, fmtDate } = A;
   const M = window.Model, S = window.Store, R = window.Rules, I = window.Importer, E = window.Engine;
   A.M = M; A.S = S; A.E = E;
-  A.VERSION = { no: 32, date: '26.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
+  A.VERSION = { no: 33, date: '26.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
 
   /* ------------------------------------------------------------- veri */
   const boot = S.load();
@@ -60,7 +60,7 @@
     const hrefs = { kurallar: '#/kurallar', home: '#/', t: cur ? '#/t/' + cur : '#/', arsiv: '#/arsiv', sorgu: '#/sorgu' + (cur ? '/' + cur : ''), kayit: '#/kayit' + (cur ? '/' + cur : ''), kart: '#/kart' + (cur ? '/' + cur : '') };
     $('#nav').innerHTML = NAV.map(([k, l, ic]) => `<a href="${hrefs[k]}" class="${(R_.name === k || (k === 'home' && R_.name === 'yeni')) ? 'on' : ''}" ${R_.name === k ? 'aria-current="page"' : ''}><svg class="ic"><use href="#${ic}"/></svg><span>${l}</span></a>`).join('');
     $('#tName').textContent = tn ? tn.info.name : (DB.tournaments[DB.cur] ? DB.tournaments[DB.cur].info.name : 'Satranç turnuva yöneticisi');
-    document.title = (tn ? tn.info.name + ' – ' : '') + 'Eşleştirme';
+    document.title = (tn ? tn.info.name + ' – ' : '') + 'Eşle';
     const bb = $('#banner');
     const parts = [];
     if (banner) parts.push(`<div class="note ${banner.level === 'err' ? 'err' : 'ok'} bn"><span>${esc(banner.msg)}</span><button class="b sm sec" data-act="hideBanner">Tamam</button></div>`);
@@ -104,7 +104,7 @@
     const need = all.length && (!DB.lastBackup || Date.now() - DB.lastBackup > 864e5) && DB.dirty;
     const piece = (id) => `<svg class="pc"><use href="#${id}"/></svg>`;
     let h = `<section class="hero"><div class="heroin"><div class="pieces" aria-hidden="true">${['p-king', 'p-queen', 'p-rook', 'p-bishop', 'p-knight', 'p-pawn'].map(piece).join('')}</div>
-      <h1>Eşleştirme</h1><p>Satranç turnuvaları için İsviçre ve Berger eşlendirme, kayıt kontrol, yaka ve masa kartları.</p>
+      <h1>Eşle</h1><p>Satranç turnuvaları için İsviçre ve Berger eşlendirme, kayıt kontrol, yaka ve masa kartları.</p>
       <div class="row tight"><a class="b big" href="#/yeni">♟ Yeni turnuva</a><button class="b sec big" data-act="impBackup">Yedekten yükle</button></div></div></section>
       <p class="muted ver" style="text-align:right;margin:4px 2px 0;font-size:12px">Sürüm v${A.VERSION.no} • ${A.VERSION.date}</p>
       <div class="stats"><div><b>${act.length}</b><small>Aktif turnuva</small></div><div><b>${pl}</b><small>Sporcu</small></div><div><b>${kc}</b><small>Kategori</small></div><div><b>${arch.length}</b><small>Arşiv</small></div></div>`;
@@ -119,7 +119,6 @@
         <div class="chips">${tn.cats.map(catLine).join('') || '<span class="muted">Kategori yok</span>'}</div>
         <div class="bar" title="İlerleme %${progress(tn)}"><i style="width:${progress(tn)}%"></i></div></div>`;
     });
-    h += `<h2>Hızlı işlemler</h2><div class="quick"><a class="b sec" href="#/yeni">Yeni turnuva</a><a class="b sec" href="#/sorgu${DB.cur ? '/' + DB.cur : ''}">UKD / ELO</a><a class="b sec" href="#/kayit${DB.cur ? '/' + DB.cur : ''}">Kayıt Kontrol</a><a class="b sec" href="#/kart${DB.cur ? '/' + DB.cur : ''}">Kartlar</a><a class="b sec" href="#/arsiv">Arşiv</a></div>`;
     h += vData();
     return h;
   }
