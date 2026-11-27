@@ -82,7 +82,7 @@
   function textBox(parent, text, x, y, w, h, spec, extra) {
     spec = sc(spec); const f = fit(text, { maxPt: spec.maxPt, minPt: spec.minPt, maxMm: spec.maxMm || w - 2 }, canvasMeasure);
     const b = box(parent, x, y, w, h, Object.assign({ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontWeight: wt('700'), fontStyle: fs(), fontFamily: T.fam, fontSize: f.pt + 'pt', lineHeight: '1.05', whiteSpace: f.wrap ? 'normal' : 'nowrap', overflow: 'hidden' }, extra || {}));
-    b.textContent = text; return b;
+    b.dataset.fit = '1'; b.dataset.min = spec.minPt; b.textContent = text; return b;
   }
   const PAWN = 'M12 2a3.5 3.5 0 0 0-2 6.4C8.7 9.3 8 10.8 8 12h8c0-1.2-.7-2.7-2-3.6A3.5 3.5 0 0 0 12 2zM7 13l-1 4h12l-1-4H7zM5 18l-1 3h16l-1-3H5z';
   function pawnSvg(parent, x, y, s) {
@@ -99,7 +99,7 @@
   function headText(parent, text, x, y, w, h, maxPt) {
     const mx = (maxPt || 20) * T.k, f = wrapFit(text, w - 2, h, mx, Math.min(10, mx), canvasMeasure);
     const b = box(parent, x, y, w, h, { display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontWeight: wt('700'), fontStyle: fs(), fontFamily: T.fam, fontSize: f.pt + 'pt', lineHeight: '1.15', color: '#111', overflow: 'hidden' });
-    b.textContent = text; return b;
+    b.dataset.fit = '1'; b.dataset.min = Math.min(10, mx); b.textContent = text; return b;
   }
   function footText(parent, dates, place, x, y, w, h) {
     if (!dates && !place) return null;
@@ -150,7 +150,7 @@
       textBox(sh, d.cat, 156.6, top + 14.3, 42.6, 13.7, MASA.cat);
       rb(13.3, top + 33, 140.7, 26.5);
       const nb = box(sh, 13.3, top + 33, 140.7, 26.5, { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: T.fam, fontStyle: fs(), fontWeight: wt('700'), textAlign: 'center', overflow: 'hidden' });
-      const line = (t, spec) => { spec = sc(spec); const f = fit(t, spec, canvasMeasure); const d2 = el('div', null, { fontSize: f.pt + 'pt', lineHeight: '1.15', whiteSpace: f.wrap ? 'normal' : 'nowrap', maxWidth: mm(spec.maxMm + 2) }, t); nb.appendChild(d2); };
+      const line = (t, spec) => { spec = sc(spec); const f = fit(t, spec, canvasMeasure); const d2 = el('div', null, { fontSize: f.pt + 'pt', lineHeight: '1.15', whiteSpace: f.wrap ? 'normal' : 'nowrap', maxWidth: mm(spec.maxMm + 2) }, t); d2.dataset.fit = '1'; d2.dataset.min = Math.max(7, spec.minPt - 2); nb.appendChild(d2); };
       line(d.name, MASA.name); if (d.club) line(d.club, MASA.club);
       rb(155.6, top + 33, 45, 26.5);
       const rt = box(sh, 159.4, top + 33, 40, 26.5, { display: 'flex', flexDirection: 'column', justifyContent: 'center', fontFamily: T.fam, fontStyle: fs(), fontWeight: wt('700'), fontSize: (19.5 * Math.min(T.k, 1.15)) + 'pt', lineHeight: '1.3' });
@@ -159,6 +159,15 @@
     return sh;
   }
 
-  const API = { FONTS, famOf, wrapFit, FAM, PER, paginate, sheetCount, estWidthMm, fit, YAKA, MASA, yakaLines, masaData, yakaPos, yakaSheet, masaSheet, canvasMeasure };
+  /** Gerçek yerleşime göre son sığdırma: taşan yazıyı (kulüp, ad, başlık) küçültür; gerekirse satıra böler. Kök öğe belgede yerleşik olmalı. */
+  function settle(rootEl) {
+    rootEl.querySelectorAll('[data-fit]').forEach(e => {
+      const min = +e.dataset.min || 8; let pt = parseFloat(e.style.fontSize) || min, g = 0;
+      const over = () => e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1;
+      while (over() && pt > min && g++ < 80) { pt -= 0.5; e.style.fontSize = pt + 'pt'; }
+      if (over()) { e.style.whiteSpace = 'normal'; while (over() && pt > 6 && g++ < 160) { pt -= 0.5; e.style.fontSize = pt + 'pt'; } }
+    });
+  }
+  const API = { settle, FONTS, famOf, wrapFit, FAM, PER, paginate, sheetCount, estWidthMm, fit, YAKA, MASA, yakaLines, masaData, yakaPos, yakaSheet, masaSheet, canvasMeasure };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.Cards = API;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -154,7 +154,7 @@
     const imgs = await loadImgs(tn); if (!$('#cardPrev')) return;
     const sh = buildSheet(st, imgs, chunks[st.page] || chunks[0]);
     const z = Math.min(1, Math.max(0.3, (host.clientWidth || 600) / 794)); host.style.setProperty('--z', z); host.style.height = Math.round(1123 * z) + 'px';
-    host.appendChild(sh);
+    host.appendChild(sh); C.settle(sh);
   }
   /** Tüm sayfaları #printRoot'a üretir (20'şerlik partiler halinde). */
   A.tools.prepareCards = async () => {
@@ -164,6 +164,7 @@
       chunks.slice(i, i + 20).forEach(ch => root.appendChild(buildSheet(st, imgs, ch)));
       await new Promise(r => setTimeout(r, 0));
     }
+    root.style.cssText = 'position:fixed;left:-99999px;top:0;visibility:hidden'; document.body.appendChild(root); C.settle(root); root.remove(); root.style.cssText = '';   // gerçek yerleşimle sığdır
     A.setPrint(root);
     await Promise.all([...root.querySelectorAll('img')].map(im => (im.decode ? im.decode().catch(() => {}) : Promise.resolve())));
     return chunks.length;

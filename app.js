@@ -4,7 +4,7 @@
   const A = window.App, { $, $$, esc, ACT, fmt, fmtDate } = A;
   const M = window.Model, S = window.Store, R = window.Rules, I = window.Importer, E = window.Engine;
   A.M = M; A.S = S; A.E = E;
-  A.VERSION = { no: 52, date: '27.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
+  A.VERSION = { no: 53, date: '27.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
 
   /* ------------------------------------------------------------- veri */
   const boot = S.load();
@@ -63,10 +63,37 @@
     const bb = $('#banner');
     const parts = [];
     if (banner) parts.push(`<div class="note ${banner.level === 'err' ? 'err' : 'ok'} bn"><span>${esc(banner.msg)}</span><button class="b sm sec" data-act="hideBanner">Tamam</button></div>`);
+    if (upd) parts.push(`<div class="note info bn"><span><b>Yeni sürüm v${upd.no} hazır</b>${upd.notes ? ' – ' + esc(upd.notes) : ''}${A.native ? '. Android’de APK’yı indirip kurmanız gerekir; verileriniz silinmez.' : '.'}</span><span class="row tight"><button class="b sm" data-act="doUpdate">${A.native ? 'APK’yı indir' : 'Güncelle'}</button><button class="b sm sec" data-act="hideUpd">Sonra</button></span></div>`);
     if (quotaFail) parts.push(`<div class="note err bn"><span><b>Kayıt başarısız:</b> tarayıcı depolaması dolu. Verileriniz kaybolabilir.</span><button class="b sm" data-act="backup">Şimdi yedek indir</button></div>`);
     bb.innerHTML = parts.join(''); A.bind(bb);
   }
   ACT.hideBanner = () => { banner = null; chrome(); };
+
+  /* ---- Güncelleme denetimi: sitedeki version.json ile karşılaştırır ---- */
+  const BASE = 'https://ilka5360.github.io/eslestirme/', APK_URL = 'https://github.com/ilka5360/eslestirme/releases/download/android-latest/Esle.apk';
+  let upd = null;
+  A.checkUpdate = async (manual) => {
+    try {
+      if (navigator.onLine === false) throw new Error('offline');
+      const r = await fetch(BASE + 'version.json?t=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) throw new Error('http ' + r.status);
+      const v = await r.json();
+      if (v && +v.no > A.VERSION.no) { upd = v; chrome(); if (manual) A.toast('Yeni sürüm var: v' + v.no, 4000); }
+      else { upd = null; chrome(); if (manual) A.toast('Güncelsiniz (v' + A.VERSION.no + ')'); }
+    } catch (e) { if (manual) A.toast('Güncelleme denetlenemedi (internet bağlantısını kontrol edin).', 4500); }
+  };
+  ACT.chkUpd = () => A.checkUpdate(true);
+  ACT.hideUpd = () => { upd = null; chrome(); };
+  ACT.doUpdate = async () => {
+    if (A.native) { location.href = APK_URL; return; }   // Android: APK indirme bağlantısı sistem tarayıcısında açılır
+    A.toast('Güncelleniyor…', 6000);
+    try {
+      const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+      if (reg) { navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), { once: true }); setTimeout(() => location.reload(), 15000); await reg.update(); }
+      else location.reload();
+    } catch (e) { location.reload(); }
+  };
+  setTimeout(() => A.checkUpdate(false), 4000);
 
   const SAFE_RO = new Set(['goR', 'standR', 'expStand', 'print', 'goStand', 'unarchive', 'expP', 'goTab', 'hideBanner', 'backup', 'openT', 'goCat', 'goTool']);
   A.render = function () {
@@ -105,7 +132,7 @@
     let h = `<section class="hero"><div class="heroin"><div class="pieces" aria-hidden="true">${['p-king', 'p-queen', 'p-rook', 'p-bishop', 'p-knight', 'p-pawn'].map(piece).join('')}</div>
       <h1>Eşle</h1><p>Satranç turnuvaları için İsviçre ve Berger eşlendirme, kayıt kontrol, yaka ve masa kartları.</p>
       <div class="row tight"><a class="b big" href="#/yeni">♟ Yeni turnuva</a><button class="b sec big" data-act="impBackup">Yedekten yükle</button></div></div></section>
-      <p class="muted ver" style="text-align:right;margin:4px 2px 0;font-size:12px">Sürüm v${A.VERSION.no} • ${A.VERSION.date}</p>
+      <p class="muted ver" style="text-align:right;margin:4px 2px 0;font-size:12px">Sürüm v${A.VERSION.no} • ${A.VERSION.date} <button class="b sm sec" data-act="chkUpd" style="margin-left:6px">Güncellemeyi denetle</button></p>
       <div class="stats"><div><b>${act.length}</b><small>Aktif turnuva</small></div><div><b>${pl}</b><small>Sporcu</small></div><div><b>${kc}</b><small>Kategori</small></div><div><b>${arch.length}</b><small>Arşiv</small></div></div>`;
     if (need) h += `<div class="note bn"><span>${DB.lastBackup ? 'Son yedek: ' + A.ago(DB.lastBackup) + ' ve sonrasında değişiklik yapıldı.' : 'Henüz yedek almadınız.'} Tarayıcı verisi silinirse turnuvalar kaybolur.</span><button class="b sm" data-act="backup">Yedek al</button></div>`;
     if (wizHasData() && (W.raw.length || W.manual.length || W.step > 1)) h += `<div class="note info bn"><span><b>Yarım kalan turnuva:</b> “${esc(W.info.name || 'adsız')}” (${W.raw.length + W.manual.length} sporcu, ${W.step}. adım)</span><span class="row tight"><a class="b sm" href="#/yeni">Devam et</a><button class="b sm sec" data-act="wiDrop">Sil</button></span></div>`;

@@ -96,8 +96,9 @@
     if (x && y) return { ad: y, soyad: x, guess: false };
     if (isim) {
       const parts = isim.trim().split(/\s+/);
-      if (parts.length === 1) return { ad: parts[0], soyad: '', guess: true };
-      const s = parts.pop(); return { ad: parts.join(' '), soyad: s, guess: true };
+      // TSF / Swiss-Manager listelerinde "isim" = SOYAD AD [AD2…]: ilk sözcük soyad, kalanı ad(lar)
+      if (parts.length === 1) return { ad: '', soyad: parts[0], guess: true };
+      const s = parts.shift(); return { ad: parts.join(' '), soyad: s, guess: true };
     }
     if (x || y) return { ad: y || '', soyad: x || '', guess: true };   // standart anlam: surname=soyad, first name=ad
     return { ad: ad || '', soyad: soyad || '', guess: false };
