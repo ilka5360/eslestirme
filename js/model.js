@@ -117,6 +117,26 @@
     renumber(c); recalcRounds(c);
     return late;
   }
+  /** 1. eşlendirme yapıldıktan sonra gelen sporcuyu 1. tura ekler (yalnız İsviçre, yalnız 1. tur).
+   *  Turda bye'daki sporcu varsa yeni sporcu onunla masaya oturtulur; yoksa ve sonuç girilmemişse 1. tur silinir (yeniden eşleştirilir). */
+  function addToRound1(c, p) {
+    if (!(c.started && c.system === 'swiss' && c.rounds.length === 1)) throw new Error('1. tura ekleme yalnızca 1. tur eşlendikten sonra, 2. tur eşlenmeden yapılabilir.');
+    const rd = c.rounds[0], bi = rd.byes.findIndex(b => b.type === 'bye');
+    const hasRes = rd.pairings.some(x => x.result);
+    if (bi < 0 && hasRes) throw new Error('1. turda bye yok ve sonuçlar girilmiş: sporcu 2. turdan itibaren eklenebilir.');
+    const q = (p.status && p.no !== undefined && p.joinRound) ? p : newPlayer(p);
+    q.joinRound = 1; q.no = 0; c.players.push(q); renumber(c);
+    if (bi >= 0) {
+      const byeP = c.players.find(x => x.id === rd.byes[bi].p);
+      const lo = q.no < byeP.no ? q : byeP, hi = lo === q ? byeP : q;
+      const loWhite = (lo.no % 2 === 1) === !!c.settings.initialWhite;   // 1. tur: tek numara başlangıç rengini alır
+      rd.byes.splice(bi, 1);
+      rd.pairings.push({ board: rd.pairings.length + 1, w: loWhite ? lo.id : hi.id, b: loWhite ? hi.id : lo.id, result: null });
+      rd.notes = (rd.notes || []).concat(`${q.ad} ${q.soyad}: geç geldi, 1. tura elle eklendi (bye’daki sporcuyla eşleştirildi).`);
+      recalcRounds(c); return 'bye';
+    }
+    c.rounds.pop(); recalcRounds(c); return 'repair';
+  }
   function deletePlayer(c, id) {
     if (!canDelete(c)) throw new Error('Eşleştirme yapıldıktan sonra sporcu silinemez; "Turnuvadan çek" kullanın.');
     const i = c.players.findIndex(p => p.id === id);
@@ -455,7 +475,7 @@
     return d;
   }
 
-  const API = { effDouble, SCHEMA, ID_RE, uid, clone, emptyDB, newSettings, newCategory, newTournament, newPlayer, shortOf, n2, stateOf, suggest, sysOf, totalRounds, completedRounds,
+  const API = { addToRound1, effDouble, SCHEMA, ID_RE, uid, clone, emptyDB, newSettings, newCategory, newTournament, newPlayer, shortOf, n2, stateOf, suggest, sysOf, totalRounds, completedRounds,
     recalcRounds, drawBerger, buildBerger, startCategory, unstartCategory, pairRound, noShows, setResult, setRounds, resetRounds, setSystem, renumber, canDelete, canAddPlayer, addPlayers, deletePlayer, withdrawPlayer, noShows, reactivatePlayer,
     categorize, uniqueName, addCategoriesTo, deleteCategory, movePlayer, pullByAge, setStatus, allDone, countPlayers, stripPII, maskTC, migrate, mergeDB, exportBundle, GR_NONE };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.Model = API;

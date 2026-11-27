@@ -181,8 +181,23 @@
     return p;
   }
   A.pForm = pForm; A.readForm = readForm;
-  ACT.addP = guard(() => A.dialog(`<h3>Sporcu ekle</h3>${pForm({})}<div class="row tight" style="margin-top:14px"><button class="b" id="ok">Ekle</button><button class="b sec" data-close>Vazgeç</button></div>`,
-    d => { A.bindPII(d); $('#ok', d).onclick = () => { const p = readForm(d, M.newPlayer({})); if (!p.soyad && !p.ad) return A.toast('Ad soyad girin'); d.close(); const l = M.addPlayers(CAT(), [p]); A.save(); A.render(); if (l) A.toast('2. turdan itibaren turnuvaya alındı'); }; }));
+  ACT.addP = guard(() => {
+    const c0 = CAT(), r1 = c0.started && c0.system === 'swiss' && c0.rounds.length === 1;
+    const rd = r1 ? c0.rounds[0] : null, byeP = rd && rd.byes.find(b => b.type === 'bye'), hasRes = rd && rd.pairings.some(x => x.result);
+    const opt = r1 ? `<div style="margin-top:10px"><label>Katılış</label><select id="ap_join"><option value="2">2. turdan itibaren (varsayılan)</option>${byeP ? `<option value="1">1. tura ekle – ${esc(nm(pById(c0, byeP.p)))} (bye) ile eşleştir</option>` : (!hasRes ? '<option value="1">1. tura ekle – 1. tur silinip yeniden eşleştirilir</option>' : '')}</select>
+      <small class="muted">${byeP || !hasRes ? '' : '1. turda bye yok ve sonuçlar girilmiş: yalnızca 2. turdan itibaren eklenebilir. '}Ekleyince başlangıç sıralaması yeniden yapılır.</small></div>` : '';
+    A.dialog(`<h3>Sporcu ekle</h3>${pForm({})}${opt}<div class="row tight" style="margin-top:14px"><button class="b" id="ok">Ekle</button><button class="b sec" data-close>Vazgeç</button></div>`,
+    d => { A.bindPII(d); $('#ok', d).onclick = async () => {
+      const p = readForm(d, M.newPlayer({})); if (!p.soyad && !p.ad) return A.toast('Ad soyad girin');
+      const c = CAT(), sel = $('#ap_join', d);
+      if (sel && sel.value === '1') {
+        if (!byeP && !(await A.ask('1. tur eşlendirmesi silinecek; sporcu eklendikten sonra 1. turu yeniden eşleştirmeniz gerekir. Devam edilsin mi?', { ok: 'Ekle ve turu sil', danger: true }))) return;
+        d.close(); let mode; try { await A.snap('sporcu-1-tur'); mode = M.addToRound1(c, p); } catch (e) { return A.toast(e.message, 6000); }
+        A.save(); rv[c.id] = 1; A.render(); return A.toast(mode === 'bye' ? 'Sporcu 1. tura eklendi' : '1. tur silindi: sporcu eklendi, 1. turu yeniden eşleştirin', 5000);
+      }
+      d.close(); const l = M.addPlayers(c, [p]); A.save(); A.render(); if (l) A.toast('2. turdan itibaren turnuvaya alındı');
+    }; });
+  });
   ACT.editP = guard((el) => { const c = CAT(), p = pById(c, el.dataset.a); A.dialog(`<h3>Sporcuyu düzenle</h3>${pForm(p)}${c.started && c.rounds.length > 3 ? '<div class="note">4. turdan sonra başlangıç numarası değiştirilemez; puan değişikliği yalnızca görüntüyü etkiler.</div>' : ''}<div class="row tight" style="margin-top:14px"><button class="b" id="ok">Kaydet</button><button class="b sec" data-close>Vazgeç</button></div>`,
     d => { A.bindPII(d); $('#ok', d).onclick = () => { readForm(d, p); if (!p.ad && !p.soyad) return A.toast('Ad soyad boş olamaz'); refreshNumbers(c); A.save(); d.close(); A.render(); }; }); });
   function refreshNumbers(c) { if (c.started) { if (c.system === 'swiss' && c.rounds.length <= 3) M.renumber(c); } else if (!(c.bergerDrawn && c.players.length <= R.BERGER_MAX)) M.renumber(c); }
