@@ -98,9 +98,7 @@
     c.sysPref = sys; resetRounds(c);
   }
   function renumber(c) {
-    if (c.manualStart) {   // elle sıralama: mevcut sıra korunur, yeni gelenler (no=0) sona
-      c.players.slice().sort((a, b) => (a.no || 1e9) - (b.no || 1e9)).forEach((p, i) => { p.no = i + 1; });
-    } else E.sortStartingList(c.players).forEach((p, i) => { p.no = i + 1; });
+    E.sortStartingList(c.players).forEach((p, i) => { p.no = i + 1; });
     c.players.sort((a, b) => a.no - b.no);
   }
   const canDelete = (c) => c.rounds.length === 0;
@@ -156,20 +154,11 @@
     if (k) { c.bergerDrawn = false; renumber(c); recalcRounds(c); }
     return k;
   }
-  /** Elle başlangıç sıralaması yalnız Swiss'te ve ilk eşlendirmeden önce yapılabilir. */
+  /** Başlangıç sıralamasını tümüyle yeniden yapar (UKD/ELO → unvan → soyad A–Z); yalnız İsviçre'de ve ilk eşlendirmeden önce. */
   const canReorder = (c) => c.rounds.length === 0 && sysOf(c) !== 'berger';
-  function moveStart(c, id, to) {
-    if (!canReorder(c)) throw new Error('Elle sıralama yalnızca İsviçre sisteminde ve ilk eşlendirmeden önce yapılabilir.');
-    const l = c.players.slice().sort((a, b) => (a.no || 1e9) - (b.no || 1e9)), i = l.findIndex(p => p.id === id);
-    if (i < 0) throw new Error('Sporcu bulunamadı.');
-    const t = Math.max(1, Math.min(l.length, Math.round(+to) || 1)) - 1;
-    const [p] = l.splice(i, 1); l.splice(t, 0, p);
-    l.forEach((x, k) => { x.no = k + 1; });
-    c.players.sort((a, b) => a.no - b.no); c.manualStart = true;
-  }
-  function autoStart(c) {
-    if (!canReorder(c)) throw new Error('İlk eşlendirmeden sonra sıralama değiştirilemez.');
-    c.manualStart = false; renumber(c);
+  function resortStart(c) {
+    if (!canReorder(c)) throw new Error('Başlangıç sıralaması yalnızca İsviçre sisteminde ve ilk eşlendirmeden önce yenilenebilir.');
+    renumber(c);
   }
   function deletePlayer(c, id) {
     if (!canDelete(c)) throw new Error('Eşleştirme yapıldıktan sonra sporcu silinemez; "Turnuvadan çek" kullanın.');
@@ -509,7 +498,7 @@
     return d;
   }
 
-  const API = { deletePlayers, canReorder, moveStart, autoStart, addToRound1, addStage, effDouble, SCHEMA, ID_RE, uid, clone, emptyDB, newSettings, newCategory, newTournament, newPlayer, shortOf, n2, stateOf, suggest, sysOf, totalRounds, completedRounds,
+  const API = { deletePlayers, canReorder, resortStart, addToRound1, addStage, effDouble, SCHEMA, ID_RE, uid, clone, emptyDB, newSettings, newCategory, newTournament, newPlayer, shortOf, n2, stateOf, suggest, sysOf, totalRounds, completedRounds,
     recalcRounds, drawBerger, buildBerger, startCategory, unstartCategory, pairRound, noShows, setResult, setRounds, resetRounds, setSystem, renumber, canDelete, canAddPlayer, addPlayers, deletePlayer, withdrawPlayer, noShows, reactivatePlayer,
     categorize, uniqueName, addCategoriesTo, deleteCategory, movePlayer, pullByAge, setStatus, allDone, countPlayers, stripPII, maskTC, migrate, mergeDB, exportBundle, GR_NONE };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.Model = API;
