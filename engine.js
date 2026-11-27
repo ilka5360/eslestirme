@@ -695,20 +695,29 @@
       // ayarlanmış puan: oynanmayan her tur ½
       adj.set(p.id, h.reduce((s, x) => s + (x.played || x.kind === 'game' ? x.pts : 0.5), 0));
     }
-    // oynanmamış (forfeit/bye/none) tur için sanal rakip puanı: Ov = Sp + (1-Sr) + 0.5*(N-R)
+    // Swiss-Manager (Swiss, 28 sporcu / 6 tur, hükmen + bye + çekilen içeren gerçek turnuva ile birebir doğrulandı):
+    //  - rakibin puanı = gerçek puanı + eşlenmediği (kaydı olmayan) her tur için ½  (hükmenle kaybedilen oyun sonucuyla sayılır)
+    //  - oynanmamış oyunda (hükmen galibiyet / puanlı bye) değer oyuncunun kendi puanıdır; puansız oynanmamış oyunda 0 (Bh, Bh-1, SB için)
+    const isBerg = !!(opts.isBerger || state.system === 'berger');
+    // Oynanmamış oyunların Buchholz/SB hesabı: 'sm' (varsayılan, Swiss-Manager ile doğrulandı) | 'fide' (FIDE sanal rakip formülü, sunudaki örnek)
+    const fide = !isBerg && ((opts.unplayed || (state.settings && state.settings.tbUnplayed)) === 'fide');
     function virtualOpp(h, idx) {
       let sp = 0; for (let i = 0; i < idx; i++) sp += h[i].pts;
-      const sr = h[idx].pts; const R = h[idx].r;
-      return sp + (1 - sr) + 0.5 * (N - R);
+      return sp + (1 - h[idx].pts) + 0.5 * (N - h[idx].r);
     }
-    // Berger: oynanmayan (hükmen) oyunda rakip puanı yerine oyuncunun kendi puanı kullanılır (Swiss-Manager)
-    const isBerg = !!(opts.isBerger || state.system === 'berger');
+    const unpaired = new Map();
+    for (const p of state.players) {
+      const jr = p.joinRound || 1;
+      unpaired.set(p.id, hist.get(p.id).filter(x => x.kind === 'none' && x.r >= jr).length);
+    }
+    const oppPts = (id) => (fide ? adj.get(id) : isBerg ? pts.get(id) : pts.get(id) + 0.5 * (unpaired.get(id) || 0));
     // oyuncu için rakip puan dizisi (her tur) ve sonuç dizisi
     const oppVals = new Map();
     for (const p of state.players) {
       const h = hist.get(p.id);
       oppVals.set(p.id, h.map((x, i) => {
-        const v = x.played ? (isBerg ? pts.get(x.opp) : adj.get(x.opp)) : (isBerg ? pts.get(p.id) : virtualOpp(h, i));
+        const own = pts.get(p.id);
+        const v = x.played ? oppPts(x.opp) : (fide ? virtualOpp(h, i) : isBerg ? own : (x.pts > 0 ? own : 0));
         return { v, res: x.pts, played: x.played, opp: x.opp, r: x.r, kind: x.kind };
       }));
     }
@@ -725,6 +734,7 @@
       const buch = sumv(vals);
       const t = {};
       t.buch = buch;
+      t.buchOwn = oppVals.get(p.id).reduce((s2, o) => s2 + (o.played ? o.v : pts.get(p.id)), 0);
       t.buchc1 = sorted.length > 1 ? sumv(sorted.slice(1)) : 0;
       t.buchc2 = sorted.length > 2 ? sumv(sorted.slice(2)) : 0;
       t.buchmed = sorted.length > 2 ? sumv(sorted.slice(1, -1)) : 0;
@@ -754,7 +764,8 @@
       const h = hist.get(p.id);
       const pl = h.filter(x => x.played);
       TB.get(p.id).bb = pl.reduce((s, x) => s + TB.get(x.opp).buch, 0);
-      TB.get(p.id).aob = pl.length ? TB.get(p.id).bb / pl.length : 0;
+      // AOB (Swiss-Manager): rakiplerin tam Buchholz'unun ortalaması; bu Buchholz'da oynanmamış her oyun = oyuncunun kendi puanı
+      TB.get(p.id).aob = pl.length ? pl.reduce((s, x) => s + (isBerg || fide ? TB.get(x.opp).buch : TB.get(x.opp).buchOwn), 0) / pl.length : 0;
     }
 
     // doğrudan karşılaşma (grup içi)

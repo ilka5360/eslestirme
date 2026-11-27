@@ -122,9 +122,11 @@
       ${on ? `<button class="b sm sec" data-act="tbUp" data-a="${k}">↑</button><button class="b sm sec" data-act="tbDn" data-a="${k}">↓</button>` : ''}</li>`;
     return `<h2>Eşitlik bozma sırası <small class="muted">(${sys === 'swiss' ? 'İsviçre' : 'Berger'})</small></h2><div class="card">
       <div class="note info">Prosedür md.19: Eş puanlı sporcular, Teknik Kurulca ilan edilen yöntemler ve sıra esas alınarak sıralanır. Sıra “Eşitlik bozma yöntemleri” belgesindeki önerilere göre hazırlanmıştır — <b>yönergenizde farklı bir sıra varsa buradan değiştirin.</b></div>
-      <ul class="tbl-order">${order.map((k, i) => li(k, i, true)).join('')}${rest.map(k => li(k, 0, false)).join('')}</ul><button class="b sec sm" data-act="tbReset">Varsayılana dön</button></div>`;
+      <ul class="tbl-order">${order.map((k, i) => li(k, i, true)).join('')}${rest.map(k => li(k, 0, false)).join('')}</ul><button class="b sec sm" data-act="tbReset">Varsayılana dön</button>
+      ${sys === 'swiss' ? `<div style="margin-top:12px"><label>Oynanmamış oyunlar (hükmen, bye, gelmeyen) Buchholz/SB hesabında</label><select data-act="tbUnp"><option value="sm" ${c.settings.tbUnplayed !== 'fide' ? 'selected' : ''}>Swiss-Manager gibi (varsayılan)</option><option value="fide" ${c.settings.tbUnplayed === 'fide' ? 'selected' : ''}>FIDE sanal rakip formülü</option></select><small class="muted">Swiss-Manager: rakibin gerçek puanı (eşlenmediği tur ½); hükmen galibiyet/bye oyuncunun kendi puanı, puansız oynanmamış oyun 0.</small></div>` : ''}</div>`;
   }
   const tbKey = (c) => (M.sysOf(c) === 'swiss' ? 'tbSwiss' : 'tbBerger');
+  ACT.tbUnp = guard((el) => { const c = CAT(); c.settings.tbUnplayed = el.value === 'fide' ? 'fide' : 'sm'; A.save(); A.render(); });
   ACT.tbOn = guard((el) => { const c = CAT(), a = c.settings[tbKey(c)], k = el.dataset.a; if (el.checked) { if (!a.includes(k)) a.push(k); } else { const i = a.indexOf(k); if (i >= 0) a.splice(i, 1); } A.save(); A.render(); });
   ACT.tbUp = guard((el) => { const c = CAT(), a = c.settings[tbKey(c)], i = a.indexOf(el.dataset.a); if (i > 0) { [a[i - 1], a[i]] = [a[i], a[i - 1]]; A.save(); A.render(); } });
   ACT.tbDn = guard((el) => { const c = CAT(), a = c.settings[tbKey(c)], i = a.indexOf(el.dataset.a); if (i >= 0 && i < a.length - 1) { [a[i + 1], a[i]] = [a[i], a[i + 1]]; A.save(); A.render(); } });
