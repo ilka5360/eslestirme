@@ -22,7 +22,7 @@
       prefs: { tsfUrlTpl: '', fideUrlTpl: 'https://ratings.fide.com/profile/{fideNo}' }, tournaments: {} };
   }
   function newSettings() {
-    return { rounds: null, roundsManual: false, byePoints: 1, initialWhite: true, double: false,
+    return { rounds: null, roundsManual: false, byePoints: 1, initialWhite: true, double: null,
       tbSwiss: E.DEFAULT_TB.swiss.slice(), tbBerger: E.DEFAULT_TB.berger.slice() };
   }
   function newCategory(name, o) {
@@ -61,10 +61,11 @@
   /* ------------------------------------------------------------ kategori yardımcıları */
   const n2 = (c) => c.players.length;
   const stateOf = (c) => ({ players: c.players, rounds: c.rounds, settings: c.settings, system: c.system });
+  const effDouble = (c) => (c.settings.double == null ? R.autoDouble(n2(c)) : !!c.settings.double);   // null = otomatik (3-4 sporcu çift devre)
   const suggest = (c) => R.suggestRounds(n2(c), c.settings.double);
-  function sysOf(c) { return c.system || c.sysPref || (n2(c) >= 10 ? 'swiss' : 'berger'); }
+  function sysOf(c) { return c.system || c.sysPref || (n2(c) > R.BERGER_MAX ? 'swiss' : 'berger'); }
   function totalRounds(c) {
-    if (sysOf(c) === 'berger') return R.bergerRounds(n2(c), c.settings.double);
+    if (sysOf(c) === 'berger') return R.bergerRounds(n2(c), effDouble(c));
     return +c.settings.rounds || 0;
   }
   function completedRounds(c) {
@@ -88,11 +89,11 @@
     c.settings.rounds = v; c.settings.roundsManual = true;
   }
   function resetRounds(c) { c.settings.roundsManual = false; recalcRounds(c); }
-  /** Sistem seçimi (başlamadan önce): swiss n>=6, berger n<=12. */
+  /** Sistem seçimi (başlamadan önce): swiss n>=6, berger n<=8. */
   function setSystem(c, sys) {
     if (c.started) throw new Error('Turnuva başladıktan sonra sistem değiştirilemez.');
     const n = n2(c);
-    if (sys === 'berger' && n > 12) throw new Error('Berger sistemi en çok 12 sporcu için seçilebilir.');
+    if (sys === 'berger' && n > R.BERGER_MAX) throw new Error('Berger sistemi en çok ' + R.BERGER_MAX + ' sporcu için kullanılır.');
     if (sys === 'swiss' && n < 6) throw new Error('İsviçre sistemi en az 6 sporcu için seçilebilir.');
     c.sysPref = sys; resetRounds(c);
   }
@@ -134,7 +135,7 @@
     c.players.sort((a, b) => a.no - b.no); c.bergerDrawn = true;
   }
   function buildBerger(c) {
-    const tab = E.bergerTable(n2(c), c.settings.double);
+    const tab = E.bergerTable(n2(c), effDouble(c));
     const byNo = new Map(c.players.map(p => [p.no, p.id]));
     c.rounds = tab.map(r => {
       const pairings = [], byes = [];
@@ -454,7 +455,7 @@
     return d;
   }
 
-  const API = { SCHEMA, ID_RE, uid, clone, emptyDB, newSettings, newCategory, newTournament, newPlayer, shortOf, n2, stateOf, suggest, sysOf, totalRounds, completedRounds,
+  const API = { effDouble, SCHEMA, ID_RE, uid, clone, emptyDB, newSettings, newCategory, newTournament, newPlayer, shortOf, n2, stateOf, suggest, sysOf, totalRounds, completedRounds,
     recalcRounds, drawBerger, buildBerger, startCategory, unstartCategory, pairRound, noShows, setResult, setRounds, resetRounds, setSystem, renumber, canDelete, canAddPlayer, addPlayers, deletePlayer, withdrawPlayer, noShows, reactivatePlayer,
     categorize, uniqueName, addCategoriesTo, deleteCategory, movePlayer, pullByAge, setStatus, allDone, countPlayers, stripPII, maskTC, migrate, mergeDB, exportBundle, GR_NONE };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.Model = API;
