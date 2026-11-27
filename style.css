@@ -287,11 +287,13 @@ td:first-child [data-tip]:hover::after{right:auto;left:0}
 
   table.st{width:max-content;min-width:100%}
   table.st th,table.st td{white-space:nowrap!important;overflow-wrap:normal!important;padding:7px 8px}
-  table.st th:first-child,table.st td:first-child{position:sticky;left:0;z-index:2;background:#fff;min-width:36px}
-  table.st th:nth-child(3),table.st td.c-nm{position:sticky;left:36px;z-index:2;background:#fff;box-shadow:2px 0 0 #dfe6dc}
-  table.st th{background:#eef3ec}table.st tr.out td{background:#fff}
 }
 
 /* v56 sıralama: çapraz tablo gibi — tek satır, yatay kaydırma, sabit Sıra/Ad sütunları */
 table.st th,table.st td{white-space:nowrap;padding:7px 8px}
 @media (max-width:1100px){table.st .ph{display:none}}
+
+@media (max-width:760px){
+  table.st th,table.st td{padding:7px 6px;font-size:13px}
+  table.st .ph,table.st .ph2{display:none}
+}
