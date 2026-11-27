@@ -124,6 +124,8 @@
       if (!h) { out.errors.push('Başlık satırı bulunamadı. Beklenen başlıklar: isim, Gr (kategori), ulusal rating, DogTar, Kulüp… İlk satırda sütun başlıkları olmalı.'); return out; }
     }
     const m = h.map; out.info.headerRow = h.row + 1;
+    /* Şablon başlıklarının yanında ayrı "AD" ve "SOYAD" sütunları varsa onlar esastır (isim sütunu sırası güvenilmez: SOYAD AD olabilir). */
+    ['ad', 'soyad'].forEach(k => { if (m[k] == null) rows[h.row].forEach((c, i) => { if (m[k] == null && ALIAS[k].includes(fold(c)) && !Object.values(m).includes(i)) m[k] = i; }); });
     if (!(m.isim != null || (m.ad != null && m.soyad != null) || (m.x != null && m.y != null))) {
       out.errors.push('Ad Soyad sütunu bulunamadı (isim veya ad+soyad gerekli). Bulunan başlıklar: ' + rows[h.row].map(c => txt(c)).filter(Boolean).join(', ').slice(0, 300));
       return out;
