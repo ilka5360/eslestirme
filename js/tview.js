@@ -6,7 +6,7 @@
   const CT = () => A.ctx();
   const CAT = () => A.ctx().cat;
   const TN = () => A.ctx().tn;
-  const nm = (p) => (p ? `${p.ad} ${p.soyad}`.trim() : '—');
+  const nm = (p) => (p ? `${p.soyad || ''} ${p.ad || ''}`.trim() : '—');   // listelerde SOYAD Ad
   const nmt = (p) => (p && p.title ? p.title + ' ' : '') + nm(p);   // sıralamalarda unvan isimden önce
   const nmw = (p) => nmt(p) + (p.status === 'withdrawn' ? ' (çekildi' + (p.wdFrom ? ', ' + p.wdFrom + '. turdan' : '') + ')' : '');
   const pById = (c, id) => c.players.find(p => p.id === id);
@@ -151,7 +151,7 @@
       ${!c.started ? `<div class="note info">Başlangıç sıralaması: <b>kuvvet puanı</b> (UKD/ELO’nun yükseği) → <b>unvan</b> → <b>alfabetik</b>. ${n > R.BERGER_MAX ? '' : 'Berger sisteminde numaralar <b>kura ile</b> verilir (başlatılırken). '}${n && n <= R.BERGER_MAX ? '<button class="b sm sec" data-act="drawB">Kura çek</button>' : ''}</div>` : ''}
       ${c.started && c.system === 'swiss' && !canAdd ? '<div class="note">Prosedür md.17(3): 2. tur eşlendirmesi duyurulduktan sonra yeni sporcu alınmaz.</div>' : ''}
       ${locked ? '<div class="note">Berger turnuvası başladı; sporcu listesi kilitli (çekilme yapılabilir).</div>' : ''}</div>
-    <div class="card"><div class="tblw fit"><table><tr>${can ? '<th class="noprint"></th>' : ''}<th class="n">No</th><th>Ad Soyad</th><th>Kulüp</th><th>Fed</th><th class="n">Doğum</th><th class="n">UKD</th><th class="n">ELO</th><th>FIDE No</th><th>Unvan</th><th>Durum</th><th class="noprint"></th></tr>
+    <div class="card"><div class="tblw fit"><table><tr>${can ? '<th class="noprint"></th>' : ''}<th class="n">No</th><th>Soyad Ad</th><th>Kulüp</th><th>Fed</th><th class="n">Doğum</th><th class="n">UKD</th><th class="n">ELO</th><th>FIDE No</th><th>Unvan</th><th>Durum</th><th class="noprint"></th></tr>
     ${players.map(p => { const wd = p.status === 'withdrawn'; return `<tr class="${wd ? 'out' : ''}">${can ? `<td class="noprint"><input type="checkbox" data-act="spChk" data-a="${p.id}" ${spSel.has(p.id) ? 'checked' : ''} aria-label="Seç"></td>` : ''}<td class="n">${p.no || ''}</td><td><b>${esc(nmt(p))}</b>${p.female ? ' <span class="pill gray">K</span>' : ''}${other[p.kisiId] ? ` <span class="pill gray" title="${esc(other[p.kisiId].join(', '))}">+${other[p.kisiId].length} kategori</span>` : ''}</td>
       <td title="${esc(p.club)}">${esc(String(p.club || '').length > 25 ? String(p.club).slice(0, 25) + '…' : p.club)}</td><td>${esc(p.fed)}</td><td class="n">${esc(p.birthYear || '')}</td><td class="n">${p.rating || ''}</td><td class="n">${p.elo || ''}</td><td>${esc(p.fideNo)}</td><td>${esc(p.title || '')}</td>
       <td>${wd ? `<span class="pill err">çekildi${p.wdFrom ? ' (' + p.wdFrom + '. turdan)' : ''}</span>` : (p.joinRound > 1 ? '<span class="pill warn">' + p.joinRound + '. turdan</span>' : '<span class="pill">aktif</span>')}</td>
@@ -294,7 +294,7 @@
     const lo = years.length ? Math.min(...years) : '', hi = years.length ? Math.max(...years) : '';
     A.dialog(`<h3>İçe aktar: ${parsed.length} sporcu bulundu</h3><p class="muted">${esc(name || '')} · eşleme: <b>${res.info.mode === 'sablon' ? 'şablon biçimi' : 'tahmini'}</b> · ${res.errors.length} hata, ${res.warnings.length} uyarı. Tüm satırlar <b>${esc(CAT().name)}</b> kategorisine eklenir.</p>
       ${res.errors.length ? `<details class="iss err"><summary>${res.errors.length} hata (bu satırlar alınmadı)</summary><ul>${res.errors.slice(0, 30).map(x => `<li>${esc(x)}</li>`).join('')}</ul></details>` : ''}
-      <div style="margin-bottom:8px"><label>Ad / soyad okuma</label><select id="nmMode">${I.NAME_MODES.map(m => `<option value="${m[0]}">${m[1]}</option>`).join('')}</select><div class="muted" id="nmSample">${esc(parsed.slice(0, 3).map(p => p.ad + ' ' + p.soyad).join(' · '))}</div><small class="muted">Soyada göre sıralama için “Ad Soyad” doğru ayrılmalı: örnekte ilk sütun ad, ikinci soyad görünmelidir.</small></div>
+      <div style="margin-bottom:8px"><label>Ad / soyad okuma</label><select id="nmMode">${I.NAME_MODES.map(m => `<option value="${m[0]}">${m[1]}</option>`).join('')}</select><div class="muted" id="nmSample">${esc(parsed.slice(0, 3).map(p => p.soyad + ' ' + p.ad).join(' · '))}</div><small class="muted">Soyada göre sıralama için “Ad Soyad” doğru ayrılmalı: örnekte ilk sütun ad, ikinci soyad görünmelidir.</small></div>
       <p class="muted">İsterseniz doğum yılı aralığı verin (boş bırakırsanız hepsi alınır).</p>
       <div class="row"><div><label>Doğum yılı (en erken)</label><input id="y1" type="number" placeholder="${lo}"></div><div><label>Doğum yılı (en geç)</label><input id="y2" type="number" placeholder="${hi}"></div></div>
       <div id="cnt" class="note ok" style="margin-top:10px">${parsed.length} sporcu eklenecek</div>
@@ -302,7 +302,7 @@
       const sel = () => { const a = +$('#y1', d).value || 0, b = +$('#y2', d).value || 9999; return parsed.filter(p => (!a && b === 9999) ? true : (p.birthYear && p.birthYear >= a && p.birthYear <= b)); };
       const upd = () => { $('#cnt', d).textContent = sel().length + ' sporcu eklenecek'; };
       $('#y1', d).oninput = upd; $('#y2', d).oninput = upd;
-      $('#nmMode', d).onchange = (e) => { I.applyNameMode(parsed, e.target.value); $('#nmSample', d).textContent = parsed.slice(0, 3).map(p => p.ad + ' ' + p.soyad).join(' · '); };
+      $('#nmMode', d).onchange = (e) => { I.applyNameMode(parsed, e.target.value); $('#nmSample', d).textContent = parsed.slice(0, 3).map(p => p.soyad + ' ' + p.ad).join(' · '); };
       $('#ok', d).onclick = async () => { const l = sel(); d.close(); await A.snap('içe-aktarma'); const late = M.addPlayers(CAT(), l); A.save(); A.render(); A.toast(l.length + ' sporcu eklendi' + (late ? ' (' + late + ' sporcu 2. turdan itibaren)' : '')); };
     });
   }
@@ -332,7 +332,7 @@
       const have = new Set(cat.players.map(p => I.fold(p.ad + p.soyad)));
       const get = () => { const [t, c] = $('#ft', d).value.split('|'); return A.db().tournaments[t].cats.find(x => x.id === c); };
       const rows = () => { const a1 = +$('#fy1', d).value || 0, a2 = +$('#fy2', d).value || 9999; return get().players.filter(p => (!a1 && a2 === 9999) || (p.birthYear && p.birthYear >= a1 && p.birthYear <= a2)).filter(p => !($('#fnew', d).checked && have.has(I.fold(p.ad + p.soyad)))); };
-      const draw = () => { $('#ftl', d).innerHTML = '<tr><th></th><th>Ad Soyad</th><th>Kulüp</th><th>Doğum</th><th>UKD</th></tr>' + rows().map(p => `<tr><td><input type="checkbox" class="fc" data-id="${esc(p.id)}" checked style="width:auto"></td><td>${esc(nm(p))}</td><td>${esc(p.club)}</td><td>${esc(p.birthYear || '')}</td><td>${p.rating || ''}</td></tr>`).join(''); };
+      const draw = () => { $('#ftl', d).innerHTML = '<tr><th></th><th>Soyad Ad</th><th>Kulüp</th><th>Doğum</th><th>UKD</th></tr>' + rows().map(p => `<tr><td><input type="checkbox" class="fc" data-id="${esc(p.id)}" checked style="width:auto"></td><td>${esc(nm(p))}</td><td>${esc(p.club)}</td><td>${esc(p.birthYear || '')}</td><td>${p.rating || ''}</td></tr>`).join(''); };
       ['ft', 'fy1', 'fy2', 'fnew'].forEach(i => { $('#' + i, d).onchange = draw; }); draw();
       $('#all', d).onclick = () => { const cs = $$('.fc', d); const on = cs.some(c => !c.checked); cs.forEach(c => { c.checked = on; }); };
       $('#ok', d).onclick = () => {
@@ -501,15 +501,15 @@
   function vStand(tn, c) {
     const cr = completed(c);
     if (!c.started || !cr) return '<h2>Sıralama</h2><div class="card"><div class="note">Henüz tamamlanmış tur yok. Bir turun tüm sonuçları girilince sıralama burada görünür.</div></div>';
-    const upto = Math.min(sr[c.id] || cr, cr), rows = standings(c, upto), order = tbOrder(c), cols = order.filter(k => k !== 'direct' && k !== 'directfide');
+    const upto = Math.min(sr[c.id] || cr, cr), rows = standings(c, upto), order = tbOrder(c), cols = order.filter(k => k !== 'direct' && k !== 'directfide'), hasRes = order.some(k => k === 'direct' || k === 'directfide');
     let prize = 0;
     const sel = Array.from({ length: cr }, (_, i) => `<option value="${i + 1}" ${upto === i + 1 ? 'selected' : ''}>${i + 1}. tur sonrası</option>`).join('');
     const final = upto === M.totalRounds(c);
     return `<h2>Sıralama ${final ? '<span class="pill">Final</span>' : ''} <small class="muted">${esc(c.name)}</small></h2>
     <div class="card noprint"><div class="row tight"><select data-act="standR" style="width:auto">${sel}</select><button class="b sec" data-act="expStand">Excel’e aktar</button><button class="b sec" data-act="print">Yazdır</button></div></div>
     <div class="card"><div class="printonly"><b>${esc(tn.info.name)} – ${esc(c.name)}</b> – ${upto}. Tur Sonrası Sıralama ${esc(A.fmtDate(tn.info.date))} ${esc(tn.info.place)}</div>
-    <div class="tblw"><table><tr><th class="n">Sıra</th><th class="n">B.No</th><th>Ad Soyad</th><th>Kulüp</th><th class="n">UKD/ELO</th><th class="n">Puan</th>${cols.map(k => `<th class="n" title="${esc(E.TB_DEFS[k].name)}">${E.TB_DEFS[k].short}</th>`).join('')}<th class="n" title="Çekilen sporcuya ödül verilmez">Ödül</th></tr>
-    ${rows.map(r => { const wd = r.p.status === 'withdrawn'; const pz = wd ? '' : ++prize; return `<tr class="${wd ? 'out' : ''}"><td class="n"><b>${r.tied ? "" : r.rank}</b></td><td class="n">${r.p.no}</td><td><b>${esc(nmt(r.p))}</b>${r.p.female ? ' <span class="pill gray">K</span>' : ''}${wd ? ` <span class="pill err">çekildi${r.p.wdFrom ? ' (' + r.p.wdFrom + '. turdan)' : ''}</span>` : ''}</td><td>${esc(c.system === 'berger' ? String(r.p.club || '').slice(0, 25) : r.p.club)}</td><td class="n">${rtg(r.p)}</td><td class="n"><b>${fmt(r.pts)}</b></td>
+    <div class="tblw"><table><tr><th class="n">Sıra</th><th class="n">B.No</th><th>Soyad Ad</th><th>Kulüp</th><th class="n">UKD/ELO</th><th class="n">Puan</th>${hasRes ? '<th class="n" title="Doğrudan karşılaşma: eş puanlıların tümü birbiriyle oynamışsa aralarındaki sonuç (SM: Res.)">Res.</th>' : ''}${cols.map(k => `<th class="n" title="${esc(E.TB_DEFS[k].name)}">${E.TB_DEFS[k].short}</th>`).join('')}<th class="n" title="Çekilen sporcuya ödül verilmez">Ödül</th></tr>
+    ${rows.map(r => { const wd = r.p.status === 'withdrawn'; const pz = wd ? '' : ++prize; return `<tr class="${wd ? 'out' : ''}"><td class="n"><b>${r.tied ? "" : r.rank}</b></td><td class="n">${r.p.no}</td><td><b>${esc(nmt(r.p))}</b>${r.p.female ? ' <span class="pill gray">K</span>' : ''}${wd ? ` <span class="pill err">çekildi${r.p.wdFrom ? ' (' + r.p.wdFrom + '. turdan)' : ''}</span>` : ''}</td><td>${esc(c.system === 'berger' ? String(r.p.club || '').slice(0, 25) : r.p.club)}</td><td class="n">${rtg(r.p)}</td><td class="n"><b>${fmt(r.pts)}</b></td>${hasRes ? `<td class="n">${fmt(r.res) || 0}</td>` : ''}
       ${cols.map(k => `<td class="n">${k === 'avgr' || k === 'avgrc1' ? fmt(r.tb[k], 1) : fmt(r.tb[k])}</td>`).join('')}<td class="n">${pz}</td></tr>`; }).join('')}</table></div>
     <p class="muted" style="margin-top:8px">Eşitlik bozma sırası: ${order.map((k, i) => `${i + 1}) ${E.TB_DEFS[k].name}`).join(' → ')}. Oynanmayan turlar için sanal rakip uygulaması kullanılır; ayarlanmış puanda oynanmayan her tur ½ sayılır.</p></div>`;
   }
@@ -534,11 +534,11 @@
     const rows = standings(c, upto), byId = new Map(c.players.map(p => [p.id, p])), order = tbOrder(c).filter(k => k !== 'direct' && k !== 'directfide');
     if (c.system === 'berger') {
       const byNo = rows.slice().sort((a, b) => a.p.no - b.p.no);
-      const out = [['Sıra', 'B.No', 'Ad Soyad', ...byNo.map(r => r.p.no), 'Puan', ...order.map(k => E.TB_DEFS[k].short)]];
+      const out = [['Sıra', 'B.No', 'Soyad Ad', ...byNo.map(r => r.p.no), 'Puan', ...order.map(k => E.TB_DEFS[k].short)]];
       rows.forEach(r => { const line = [r.tied ? "" : r.rank, r.p.no, nmw(r.p)]; byNo.forEach(cc => { if (cc.p.id === r.p.id) { line.push('■'); return; } line.push(r.hist.filter(x => x.opp === cc.p.id && x.kind !== 'none').map(x => (x.pending ? '' : fmt(x.pts) || '0')).join(' ')); }); line.push(r.pts, ...order.map(k => Math.round(r.tb[k] * 100) / 100)); out.push(line); });
       return out;
     }
-    const out = [['Sıra', 'B.No', 'Ad Soyad', 'Rtg', ...Array.from({ length: upto }, (_, i) => (i + 1) + '. Tur'), 'Puan', ...order.map(k => E.TB_DEFS[k].short)]];
+    const out = [['Sıra', 'B.No', 'Soyad Ad', 'Rtg', ...Array.from({ length: upto }, (_, i) => (i + 1) + '. Tur'), 'Puan', ...order.map(k => E.TB_DEFS[k].short)]];
     rows.forEach(r => out.push([r.tied ? "" : r.rank, r.p.no, nmw(r.p), rtg(r.p), ...r.hist.slice(0, upto).map(x => cellTxt(x, byId)), r.pts, ...order.map(k => Math.round(r.tb[k] * 100) / 100)]));
     return out;
   }

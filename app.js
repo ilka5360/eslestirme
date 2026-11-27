@@ -4,7 +4,7 @@
   const A = window.App, { $, $$, esc, ACT, fmt, fmtDate } = A;
   const M = window.Model, S = window.Store, R = window.Rules, I = window.Importer, E = window.Engine;
   A.M = M; A.S = S; A.E = E;
-  A.VERSION = { no: 47, date: '27.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
+  A.VERSION = { no: 48, date: '27.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
 
   /* ------------------------------------------------------------- veri */
   const boot = S.load();
@@ -263,7 +263,7 @@
 
   /* Akış şeridi: turnuva kurulumundan çapraz tabloya adım adım */
   const FLOW = ['Turnuva bilgisi', 'Sporcular', 'Kategoriler', 'Özet / oluştur', 'Tur ve zaman bilgileri', 'Kategori / tur başlat', 'Eşlendirme ve sonuç', 'Sıralama', 'Çapraz tablo'];
-  A.flowBar = (cur) => `<ol class="flow noprint" aria-label="Akış">${FLOW.map((l, i) => `<li class="${i + 1 === cur ? 'on' : i + 1 < cur ? 'done' : ''}">${l}</li>`).join('')}</ol>`;
+  A.flowBar = (cur, href) => `<ol class="flow noprint" aria-label="Akış">${FLOW.map((l, i) => `<li class="${i + 1 === cur ? 'on' : i + 1 < cur ? 'done' : ''}">${href && href(i + 1) ? `<a href="${href(i + 1)}" ${i + 1 === cur ? 'aria-current="step"' : ''}>${l}</a>` : l}</li>`).join('')}</ol>`;
   /* ============================================================= SİHİRBAZ */
   let W = null;
   function wizReset() {
@@ -327,7 +327,7 @@
       <div style="margin-bottom:8px"><label>Kategori (Gr)</label><input id="m_gr" list="grs" value="${esc(W.lastCat)}" placeholder="Örn. A KATEGORİSİ" maxlength="40"><datalist id="grs">${[...new Set(wizPlayers().map(p => p.src.gr).filter(Boolean))].map(g => `<option value="${esc(g)}">`).join('')}</datalist></div>
       ${A.pForm({}, 'm_')}
       <div style="margin-top:10px"><button class="b" data-act="wiAdd">+ Sporcuyu ekle</button></div>
-      ${W.manual.length ? `<div class="tblw" style="margin-top:10px;max-height:260px"><table><tr><th>Ad Soyad</th><th>Kategori</th><th class="n">UKD</th><th>Doğum</th><th></th></tr>${W.manual.map(p => `<tr><td>${esc(p.ad)} ${esc(p.soyad)}</td><td>${esc(p.src.gr)}</td><td class="n">${p.rating || ''}</td><td>${esc(fmtDate(p.birthDate))}</td><td><button class="b sm red" data-act="wiRm" data-a="${p.id}" aria-label="Kaldır">✕</button></td></tr>`).join('')}</table></div>` : ''}</div>
+      ${W.manual.length ? `<div class="tblw" style="margin-top:10px;max-height:260px"><table><tr><th>Soyad Ad</th><th>Kategori</th><th class="n">UKD</th><th>Doğum</th><th></th></tr>${W.manual.map(p => `<tr><td>${esc(p.soyad)} ${esc(p.ad)}</td><td>${esc(p.src.gr)}</td><td class="n">${p.rating || ''}</td><td>${esc(fmtDate(p.birthDate))}</td><td><button class="b sm red" data-act="wiRm" data-a="${p.id}" aria-label="Kaldır">✕</button></td></tr>`).join('')}</table></div>` : ''}</div>
       <p class="muted">Excel yüklemeden, sporcu eklemeden de devam edebilirsiniz (boş kategorilerle başlanır).</p>`;
     return h + wnav(1, 3, 'İleri →');
   }
@@ -394,8 +394,8 @@
     const age = cats.filter(c => c.kind === 'age' && c.players.length); if (!age.length) return '';
     const stayList = W.stay.size;
     return `<details style="margin-top:10px"><summary>Taşınan sporcular (${age.reduce((s, c) => s + c.players.length, 0)})${stayList ? ` · ${stayList} sporcu Gr’de bırakıldı` : ''}</summary>
-      ${age.map(c => `<h4 style="margin:8px 0 4px">${esc(c.name)}</h4><div class="tblw" style="max-height:220px"><table><tr><th>Taşı</th><th>Ad Soyad</th><th>Gr</th><th class="n">Doğum</th></tr>${c.players.map(p => `<tr><td><input type="checkbox" data-act="wiMove" data-a="${p.id}" checked></td><td>${esc(p.ad)} ${esc(p.soyad)}</td><td>${esc(p.src.gr)}</td><td class="n">${p.birthYear}</td></tr>`).join('')}</table></div>`).join('')}
-      ${stayList ? `<div class="muted" style="margin-top:6px">Gr’de bırakılan sporcular: ${[...W.stay].map(id => { const p = wizPlayers().find(x => x.id === id); return p ? `<button class="chip" data-act="wiMove" data-a="${p.id}" data-undo="1">${esc(p.ad)} ${esc(p.soyad)} ↶</button>` : ''; }).join(' ')}</div>` : ''}</details>`;
+      ${age.map(c => `<h4 style="margin:8px 0 4px">${esc(c.name)}</h4><div class="tblw" style="max-height:220px"><table><tr><th>Taşı</th><th>Soyad Ad</th><th>Gr</th><th class="n">Doğum</th></tr>${c.players.map(p => `<tr><td><input type="checkbox" data-act="wiMove" data-a="${p.id}" checked></td><td>${esc(p.soyad)} ${esc(p.ad)}</td><td>${esc(p.src.gr)}</td><td class="n">${p.birthYear}</td></tr>`).join('')}</table></div>`).join('')}
+      ${stayList ? `<div class="muted" style="margin-top:6px">Gr’de bırakılan sporcular: ${[...W.stay].map(id => { const p = wizPlayers().find(x => x.id === id); return p ? `<button class="chip" data-act="wiMove" data-a="${p.id}" data-undo="1">${esc(p.soyad)} ${esc(p.ad)} ↶</button>` : ''; }).join(' ')}</div>` : ''}</details>`;
   }
   ACT.wiOn = (el) => { const k = el.dataset.a; if (el.checked) W.off.delete(k); else W.off.add(k); A.render(); };
   ACT.wiName = (el) => { W.names[el.dataset.a] = el.value.trim().slice(0, 40); };
@@ -456,9 +456,11 @@
       <div class="row tight"><a class="b sec sm" href="#/kayit/${tn.id}">Kayıt Kontrol</a><a class="b sec sm" href="#/kart/${tn.id}">Kartlar</a><a class="b sec sm" href="#/sorgu/${tn.id}">UKD/ELO</a><a class="b ${R_.cid === 'ayarlar' ? '' : 'sec'} sm" href="#/t/${tn.id}/ayarlar">⚙ Ayarlar</a></div></div>
       <div class="cattabs noprint" role="tablist">${tn.cats.map(c => `<a role="tab" class="ctab ${cat && c.id === cat.id && R_.cid !== 'ayarlar' ? 'on' : ''}" href="#/t/${tn.id}/${c.id}/${R_.tab || 'spor'}">${esc(c.name)} <span>${c.players.length}</span></a>`).join('')}
         <button class="ctab add" data-act="addCat">+ Kategori</button></div>`;
-    if (R_.cid === 'ayarlar') return h + vTnSettings(tn);
+    const base = `#/t/${tn.id}`, c0 = cat || tn.cats.find(c => c.id === DB.curCat) || tn.cats[0], cb = c0 ? `${base}/${c0.id}` : base;
+    const flowHref = (n) => ({ 1: `${base}/ayarlar`, 2: c0 && `${cb}/spor`, 3: `${base}/ayarlar`, 4: `${base}/ayarlar`, 5: c0 && `${cb}/ayar`, 6: c0 && `${cb}/ayar`, 7: c0 && `${cb}/rounds`, 8: c0 && `${cb}/stand`, 9: c0 && `${cb}/cross` }[n]);
+    if (R_.cid === 'ayarlar') return h + A.flowBar(1, flowHref) + vTnSettings(tn);
     if (!cat) return h + '<div class="note">Bu turnuvada henüz kategori yok. “+ Kategori” ile ekleyin.</div>';
-    h += A.flowBar(cat.started && R_.tab === 'ayar' ? 6 : (FLOWSTEP[R_.tab] || 2));
+    h += A.flowBar(cat.started && R_.tab === 'ayar' ? 6 : (FLOWSTEP[R_.tab] || 2), flowHref);
     h += `<div class="subtabs noprint">${TABS.map(([k, l]) => `<a class="${R_.tab === k ? 'on' : ''}" href="#/t/${tn.id}/${cat.id}/${k}">${l}</a>`).join('')}</div>`;
     const v = A.views.cat;
     return h + (v ? v(R_.tab, tn, cat) : '<div class="note err">Modül yüklenemedi.</div>');

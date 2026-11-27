@@ -822,6 +822,13 @@
       i = j;
     }
     final.forEach((r, k) => { r.rank = k + 1; });
+    // Swiss-Manager "Res." sütunu: aynı puandaki sporcuların tümü birbiriyle oynamışsa aralarındaki sonuç puanı, aksi halde 0
+    for (let a = 0; a < final.length;) {
+      let b = a; while (b < final.length && final[b].pts === final[a].pts) b++;
+      const grp = final.slice(a, b), d = grp.length > 1 ? directEncounter(grp, true) : null;
+      grp.forEach(g => { g.res = d ? d.get(g.p.id) : 0; });
+      a = b;
+    }
     // Tüm eşitlik bozma ölçütleri de eşitse (Swiss-Manager gibi) ortak sıra: r.tied = true, sıra bir öncekiyle aynı
     const numKeys = (opts.order || []).filter(k => k !== 'direct' && k !== 'directfide');
     for (let k = 1; k < final.length; k++) {

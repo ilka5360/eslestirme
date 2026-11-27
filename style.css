@@ -103,7 +103,7 @@ code{background:#eef2ee;padding:1px 5px;border-radius:5px}
 /* ================= v2: satranç teması, dashboard, sihirbaz, araçlar ================= */
 :root{--bd1:#eeeed2;--bd2:#769656}
 .pc{width:1em;height:1em;fill:currentColor;flex:none}
-#nav{display:flex;gap:4px;flex:1;justify-content:flex-end}
+#nav{display:flex;gap:4px;flex:1;justify-content:flex-start}
 #nav a{display:flex;align-items:center;gap:6px;color:#d7f5e0;text-decoration:none;padding:8px 12px;border-radius:9px;font-size:14px;white-space:nowrap}
 #nav a .ic{width:18px;height:18px}
 #nav a:hover{background:rgba(255,255,255,.14)}
@@ -233,6 +233,7 @@ label.b.sm{padding:6px 12px;min-height:38px}
 .flow li.on{border-color:var(--g2);color:var(--g);font-weight:700}.flow li.on:before{background:var(--g2);color:#fff}
 .flow li.done:before{background:var(--bd2);color:#fff}
 .flow li a{color:inherit;text-decoration:none;display:block}
+.flow li:has(a):hover{background:#eef4ec;border-color:var(--g2)}
 @media print{.flow{display:none}}
 
 .brand .logo{width:36px;height:36px;border-radius:9px;flex:0 0 auto}

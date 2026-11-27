@@ -5,7 +5,7 @@
   const M = window.Model, S = window.Store, I = window.Importer, RM = window.RatingMatch, XO = window.XlsxOut, C = window.Cards;
   const guard = A.mut;
   const collator = new Intl.Collator('tr');
-  const nm = (p) => `${p.ad} ${p.soyad}`.trim();
+  const nm = (p) => `${p.soyad || ''} ${p.ad || ''}`.trim();
   A.tools = {};
 
   /* ---------- yazdırma kökü: yalnızca #printRoot basılır */
@@ -130,7 +130,7 @@
         <div style="flex:1 1 220px"><label>Arka plan netliği: %${st.bg}</label><input type="range" min="5" max="100" step="1" value="${st.bg}" data-act="kcOpt" data-a="bg" aria-label="Arka plan netliği"><small class="muted">%25 varsayılan · %100 tam net (yazılar okunmayabilir)</small></div>
         <label class="chk"><input type="checkbox" data-act="kcOptC" data-a="marks" ${st.marks ? 'checked' : ''}> Kesim işaretleri</label></div>` : ''}
       <div class="row tight" style="margin-top:10px"><button class="b sm sec" data-act="clubPaste">Kulüp adlarını toplu yapıştır</button><button class="b sm sec" data-act="kcAll">Tümünü seç / kaldır</button></div>
-      <details style="margin-top:10px"><summary>Sporcu seçimi (${items.reduce((s, x) => s + x.ps.length, 0)} basılacak)</summary>${tn.cats.filter(c => sel.has(c.id)).map(c => `<h4 style="margin:8px 0 4px">${esc(c.name)}</h4><div class="tblw" style="max-height:260px"><table><tr><th></th><th class="n">No</th><th>Ad Soyad</th><th>Kulüp</th></tr>${c.players.map(p => `<tr class="${p.status === 'withdrawn' ? 'out' : ''}"><td><input type="checkbox" data-act="kcPl" data-a="${p.id}" ${st.ex.has(p.id) ? '' : 'checked'} aria-label="Seç"></td><td class="n">${p.no}</td><td>${esc(nm(p))}</td><td>${esc(p.club)}</td></tr>`).join('')}</table></div>`).join('')}</details></div>
+      <details style="margin-top:10px"><summary>Sporcu seçimi (${items.reduce((s, x) => s + x.ps.length, 0)} basılacak)</summary>${tn.cats.filter(c => sel.has(c.id)).map(c => `<h4 style="margin:8px 0 4px">${esc(c.name)}</h4><div class="tblw" style="max-height:260px"><table><tr><th></th><th class="n">No</th><th>Soyad Ad</th><th>Kulüp</th></tr>${c.players.map(p => `<tr class="${p.status === 'withdrawn' ? 'out' : ''}"><td><input type="checkbox" data-act="kcPl" data-a="${p.id}" ${st.ex.has(p.id) ? '' : 'checked'} aria-label="Seç"></td><td class="n">${p.no}</td><td>${esc(nm(p))}</td><td>${esc(p.club)}</td></tr>`).join('')}</table></div>`).join('')}</details></div>
       <div class="card"><div class="row tight noprint" style="align-items:center"><b>${pages} sayfa</b><span class="muted">(${groups.map(g => g.length + ' kart → ' + C.sheetCount(g.length)).join(' + ') || '—'})</span>
         <span style="flex:1"></span><button class="b sm sec" data-act="kcPg" data-a="-1" ${st.page <= 0 ? 'disabled' : ''}>◀</button><span>${pages ? st.page + 1 : 0} / ${pages}</span><button class="b sm sec" data-act="kcPg" data-a="1" ${st.page >= pages - 1 ? 'disabled' : ''}>▶</button>
         <button class="b big" data-act="kcPrint" ${pages ? '' : 'disabled'}>🖨 Yazdır / PDF olarak kaydet</button></div>
@@ -189,7 +189,7 @@
     A.dialog(`<h3>Kulüp adlarını toplu yapıştır</h3><p class="muted">Her satıra <code>Ad Soyad</code> sekme (Tab) veya noktalı virgül <code>;</code> ve <code>Kulüp adı</code> yazın (Excel’den iki sütun kopyalayabilirsiniz). Ad+soyad eşleşenlere kulüp adı yazılır.</p><textarea id="cl" maxlength="200000" placeholder="ENES TANRIVERDİ&#9;DARÜŞŞAFAKA SPOR KULÜBÜ"></textarea><div class="row tight" style="margin-top:10px"><button class="b" id="ok">Uygula</button><button class="b sec" data-close>Vazgeç</button></div>`, d => {
       $('#ok', d).onclick = () => {
         const map = new Map(); $('#cl', d).value.split(/\r?\n/).forEach(l => { const m = l.split(/\t|;/); if (m.length >= 2 && m[0].trim()) map.set(I.fold(m[0]), m.slice(1).join(' ').trim().slice(0, 80)); });
-        let n = 0; tn.cats.forEach(c => c.players.forEach(p => { const v = map.get(I.fold(p.ad + ' ' + p.soyad)) || map.get(I.fold(p.ad + p.soyad)); if (v != null) { p.club = v; n++; } }));
+        let n = 0; tn.cats.forEach(c => c.players.forEach(p => { const v = map.get(I.fold(p.ad + ' ' + p.soyad)) || map.get(I.fold(p.ad + p.soyad)) || map.get(I.fold(p.soyad + ' ' + p.ad)) || map.get(I.fold(p.soyad + p.ad)); if (v != null) { p.club = v; n++; } }));
         A.save(); d.close(); A.toast(n + ' sporcunun kulübü güncellendi'); A.render();
       };
     });
