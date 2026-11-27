@@ -140,7 +140,8 @@
     const others = tn.cats.filter(x => x !== c && !x.rounds.length);
     const players = c.players.slice().sort((a, b) => (a.no || 9999) - (b.no || 9999) || E.startRating(b) - E.startRating(a));
     const other = {}; tn.cats.forEach(x => { if (x !== c) x.players.forEach(p => { (other[p.kisiId] = other[p.kisiId] || []).push(x.name); }); });
-    return `<h2>Sporcular <span class="pill">${n}</span></h2>
+    const quota = +tn.info.quota || 0, tot = M.countPlayers(tn);
+    return `<h2>Sporcular <span class="pill">${n}</span></h2>${quota && tot > quota ? `<div class="note err noprint">Yönergedeki kontenjan ${quota} sporcu; şu an turnuvada ${tot} sporcu var.</div>` : ''}
     <div class="card noprint"><div class="row tight">
       <button class="b" data-act="addP" ${canAdd ? '' : 'disabled'}>+ Sporcu ekle</button>
       <button class="b sec" data-act="fromT" ${canAdd ? '' : 'disabled'}>Başka kategoriden aktar</button>

@@ -4,7 +4,7 @@
   const A = window.App, { $, $$, esc, ACT, fmt, fmtDate } = A;
   const M = window.Model, S = window.Store, R = window.Rules, I = window.Importer, E = window.Engine;
   A.M = M; A.S = S; A.E = E;
-  A.VERSION = { no: 50, date: '27.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
+  A.VERSION = { no: 51, date: '27.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
 
   /* ------------------------------------------------------------- veri */
   const boot = S.load();
@@ -269,7 +269,7 @@
   function wizReset() {
     const d = today();
     W = { step: 1, info: { name: '', date: d, dateEnd: '', place: '', arbiter: '', tempo: '35+30', refYear: yearOf(d) }, refManual: false, src: null, wb: null, raw: [], manual: [],
-      ageGroups: [], copy: false, stay: new Set(), names: {}, off: new Set(), merges: [], extra: [], lastCat: '' };
+      ageGroups: [], copy: false, stay: new Set(), names: {}, off: new Set(), merges: [], extra: [], lastCat: '', yon: null, yonRes: null, yonFile: '' };
   }
   const wizPlayers = () => W.raw.concat(W.manual);
   function wizCats() {
@@ -298,10 +298,41 @@
   const wnav = (back, next, nextLabel, disabled) => `<div class="row tight wnav"><button class="b sec" data-act="wiGo" data-a="${back}">${back ? '← Geri' : 'Vazgeç'}</button>${next ? `<button class="b" data-act="wiGo" data-a="${next}" ${disabled ? 'disabled' : ''}>${nextLabel || 'İleri →'}</button>` : ''}</div>`;
   function wiStep1() {
     const f = (k, l, ph, type) => `<div><label>${l}</label><input data-act="wi" data-a="${k}" type="${type || 'text'}" value="${esc(W.info[k] || '')}" ${ph ? `placeholder="${esc(ph)}"` : ''} maxlength="120"></div>`;
-    return `<div class="card"><div class="row frm">${f('name', 'Turnuva adı *', 'Örn. 3. Mübin Boysan Anma Turnuvası')}${f('date', 'Başlama tarihi', '', 'date')}${f('dateEnd', 'Bitiş tarihi', '', 'date')}</div>
+    const yr = W.yonRes;
+    const yonCard = `<div class="card"><h3>Yönergeden doldur <small class="muted">(isteğe bağlı)</small></h3>
+      <p class="muted" style="margin-top:0">Yarışma yönergesi PDF’sini seçin: turnuva adı, tarih, yer, zaman kontrolü, kategoriler, tur sayısı ve tur saatleri otomatik doldurulur. Sporcuları sonra eklersiniz. Doldurulanları aşağıda kontrol edip düzeltebilirsiniz.</p>
+      <button class="b sec" data-act="wiYon">📄 Yönerge PDF’si seç</button>
+      ${yr ? `<div class="note ${yr.warnings.length ? '' : 'info'}" style="margin-top:10px"><b>${esc(W.yonFile || 'Yönerge')}</b> okundu: ${esc(yr.found.join(', ') || 'bilgi bulunamadı')}.${yr.cats.length ? `<br>Kategoriler: ${esc(yr.cats.map(c => c.name + (c.minYear ? ' (' + (c.minYear === c.maxYear ? c.minYear : c.minYear + '–' + c.maxYear) + ')' : '')).join(' · '))}` : ''}${yr.extra.quota ? `<br>Kontenjan: ${yr.extra.quota} sporcu` : ''}${yr.warnings.length ? `<br>⚠ ${esc(yr.warnings.join(' '))}` : ''}</div>` : ''}</div>`;
+    return yonCard + `<div class="card"><div class="row frm">${f('name', 'Turnuva adı *', 'Örn. 3. Mübin Boysan Anma Turnuvası')}${f('date', 'Başlama tarihi', '', 'date')}${f('dateEnd', 'Bitiş tarihi', '', 'date')}</div>
       <div class="row frm" style="margin-top:10px">${f('place', 'Yer', 'Rize')}${f('arbiter', 'Başhakem')}${f('tempo', 'Zaman kontrolü', '35+30')}
       <div><label>Yaş hesabı yılı</label><input type="number" data-act="wi" data-a="refYear" min="1990" max="2100" value="${W.info.refYear}"><small class="muted">Yaş = bu yıl − doğum yılı</small></div></div><div class="note info">Başlama / bitiş tarihi ve zaman kontrolü, kategorilerin <b>Tur ve zaman bilgileri</b> sayfasına otomatik taşınır (1. tur 10:00, turlar arası 150 dk).</div></div>${wnav(0, 2, 'İleri →')}`;
   }
+  /* Yönerge PDF'si → sihirbaz alanları (sporcular hariç). Mevcut turnuvalara dokunmaz. */
+  const applyYon = (r, fname) => {
+    const keep = ['name', 'date', 'dateEnd', 'place', 'tempo', 'organizer', 'director', 'email', 'arbiter'];
+    keep.forEach(k => { if (r.info[k]) W.info[k] = r.info[k]; });
+    if (r.extra.quota) W.info.quota = r.extra.quota;
+    if (r.extra.deadline) W.info.deadline = r.extra.deadline;
+    if (r.extra.forfeitMin) W.info.forfeitMin = r.extra.forfeitMin;
+    if (r.extra.awards) W.info.awards = r.extra.awards;
+    if (r.refOK && r.refYear) { W.info.refYear = r.refYear; W.refManual = true; }
+    else if (r.info.date && !W.refManual) W.info.refYear = yearOf(r.info.date);
+    W.ageGroups = []; W.extra = []; W.names = {}; W.off = new Set(); W.merges = []; W.stay = new Set(); W.copy = false;
+    r.cats.forEach(c => {
+      if (r.refOK && c.ageMax) { W.ageGroups.push(c.ageMax); W.names['age:' + c.ageMax] = c.name; }
+      else W.extra.push(c.name.slice(0, 40));
+    });
+    W.yon = { rounds: r.rounds, system: r.system, schedule: r.schedule }; W.yonRes = r; W.yonFile = fname;
+  };
+  ACT.wiYon = () => A.pickFile('.pdf,application/pdf', async (f) => {
+    try {
+      if (f.size > 10 * 1024 * 1024) throw new Error('PDF en çok 10 MB olabilir.');
+      A.toast('Yönerge okunuyor…', 8000);
+      const r = window.Yonerge.parse(await window.Yonerge.readFile(f));
+      if (!r.ok) { A.toast(r.warnings.join(' ') || 'Yönerge okunamadı.', 6000); return; }
+      applyYon(r, f.name); A.toast('Yönerge okundu – bilgileri kontrol edin.'); A.render();
+    } catch (e) { A.toast(e.message || 'PDF okunamadı', 6000); }
+  });
   ACT.wi = (el) => {
     const k = el.dataset.a; let v = el.value.trim();
     if (k === 'refYear') { W.info.refYear = Math.max(1990, Math.min(2100, +v || yearOf(W.info.date))); W.refManual = true; }
@@ -437,6 +468,16 @@
     const info = Object.assign({}, W.info, { name: W.info.name.trim() });
     const tn = M.newTournament(info);
     M.addCategoriesTo(tn, kept.map(c => ({ name: wName(c) || c.name, short: c.short, kind: c.kind, ageMax: c.ageMax, refYear: c.refYear || W.info.refYear, players: c.players })));
+    if (W.yon) tn.cats.forEach(c => {          // yönergeden gelen tur sayısı, sistem ve tur programı
+      if (W.yon.system) c.sysPref = W.yon.system;
+      if (W.yon.rounds && W.yon.system !== 'berger') { c.settings.rounds = W.yon.rounds; c.settings.roundsManual = true; }
+      if (W.yon.schedule) {
+        const S = JSON.parse(JSON.stringify(W.yon.schedule)), r0 = S.rounds[0], r1 = S.rounds[1];
+        if (r0 && r0.t) S.t1 = r0.t;
+        if (r0 && r1 && r0.d === r1.d && r0.t && r1.t) { const d = (+r1.t.slice(0, 2) * 60 + +r1.t.slice(3)) - (+r0.t.slice(0, 2) * 60 + +r0.t.slice(3)); if (d >= 30 && d <= 300) S.iv = d; }
+        c.schedule = S;
+      }
+    });
     DB.tournaments[tn.id] = tn; DB.cur = tn.id; DB.curCat = tn.cats[0].id;
     A.save(); A.snap('sihirbaz-sonu'); W = null;
     A.toast(`Turnuva oluşturuldu: ${tn.cats.length} kategori, ${M.countPlayers(tn)} sporcu`);
@@ -473,6 +514,7 @@
       <div class="row frm">${inf('name', 'Turnuva adı')}${inf('date', 'Başlama tarihi', '', 'date')}${inf('dateEnd', 'Bitiş tarihi', '', 'date')}</div>
       <div class="row frm" style="margin-top:10px">${inf('place', 'Yer')}${inf('organizer', 'Organizatör(ler)')}${inf('tempo', 'Zaman kontrolü', '35+30')}${inf('federation', 'Federasyon', 'TUR')}</div>
       <div class="row" style="margin-top:10px">${inf('director', 'Turnuva direktörü')}${inf('arbiter', 'Başhakem')}${inf('deputy', 'Başhakem yardımcısı')}${inf('referees', 'Hakemler')}</div>
+      <div class="row" style="margin-top:10px">${inf('quota', 'Kontenjan (sporcu)', '', 'number')}${inf('deadline', 'Son başvuru', '2026-10-30 21:00')}${inf('forfeitMin', 'Hükmen yenik süresi (dk)', '15', 'number')}${inf('awards', 'Ödüller')}</div>
       <div class="row" style="margin-top:10px">${inf('web', 'İnternet sayfası')}${inf('email', 'E-posta')}<div><label>Yaş hesabı yılı</label><input type="number" data-act="info" data-a="refYear" value="${tn.info.refYear || yearOf(tn.info.date)}" min="1990" max="2100"></div></div></div>
       <h2>Kategoriler</h2><div class="card"><table><tr><th>Kategori</th><th class="n">Sporcu</th><th class="n">Tur</th><th>Durum</th><th></th></tr>
       ${tn.cats.map(c => `<tr><td><input value="${esc(c.name)}" data-act="catName" data-a="${c.id}" maxlength="40" aria-label="Kategori adı"></td><td class="n">${c.players.length}</td><td class="n">${M.totalRounds(c) || '—'}</td><td>${c.started ? (M.completedRounds(c) >= M.totalRounds(c) && M.totalRounds(c) ? 'bitti' : M.completedRounds(c) + '. tur bitti') : 'başlamadı'}</td>

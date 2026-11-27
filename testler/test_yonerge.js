@@ -1,0 +1,11 @@
+const { assert, t, done } = require('./_h');
+const Y = require('../js/yonerge.js');
+console.log('T-YONERGE: 29 Ekim Cumhuriyet Bayramı yönergesi (gerçek PDF metin öğeleri)');
+const r = Y.parse(require('./fix_yonerge_items.json'));
+t('turnuva bilgileri', () => { assert.equal(r.info.name, '29 Ekim Cumhuriyet Bayramı Satranç Turnuvası'); assert.equal(r.info.date, '2026-10-31'); assert.equal(r.info.dateEnd, '2026-11-01'); assert.equal(r.info.tempo, '35+30'); assert.equal(r.info.place, 'Rize Gençlik Merkezi Satranç Salonu'); assert.equal(r.info.director, 'Ersoy Ustaoğlu'); assert.equal(r.info.email, 'rize@tsf.org.tr'); });
+t('sistem ve tur sayısı', () => { assert.equal(r.system, 'swiss'); assert.equal(r.rounds, 6); });
+t('4 kategori ve referans yılı 2027', () => { assert.deepEqual(r.cats.map(c => [c.name, c.ageMax, c.minYear, c.maxYear]), [['7 YAŞ', 7, 2020, 2020], ['8 YAŞ', 8, 2019, 2019], ['10 YAŞ VE ALTI', 10, 2017, 2018], ['14 YAŞ VE ALTI', 14, 2013, 2016]]); assert.equal(r.refYear, 2027); assert.ok(r.refOK); });
+t('tur programı: 6 tur, kayıt, teknik toplantı', () => { assert.deepEqual(r.schedule.rounds.map(x => x.d + ' ' + x.t), ['2026-10-31 10:00', '2026-10-31 12:30', '2026-10-31 15:00', '2026-11-01 10:00', '2026-11-01 12:30', '2026-11-01 15:00']); assert.deepEqual(r.schedule.kayit, { d: '2026-10-31', t: '09:00', t2: '09:30' }); assert.deepEqual(r.schedule.teknik, { d: '2026-10-31', t: '09:30' }); assert.equal(r.schedule.odul.d, '2026-11-01'); });
+t('kontenjan, hükmen süresi, son başvuru, ödül', () => { assert.equal(r.extra.quota, 170); assert.equal(r.extra.forfeitMin, 15); assert.equal(r.extra.deadline, '2026-10-30 21:00'); assert.ok(/Madalya/.test(r.extra.awards)); assert.deepEqual(r.warnings, []); });
+t('yönerge olmayan dosya reddedilir', () => { const x = Y.parse([{ w: 595, h: 842, items: [{ s: 'Merhaba dünya', x: 50, y: 700, w: 60 }] }]); assert.equal(x.ok, false); });
+done('test_yonerge');
