@@ -4,7 +4,7 @@
   const A = window.App, { $, $$, esc, ACT, fmt, fmtDate } = A;
   const M = window.Model, S = window.Store, R = window.Rules, I = window.Importer, E = window.Engine;
   A.M = M; A.S = S; A.E = E;
-  A.VERSION = { no: 28, date: '26.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
+  A.VERSION = { no: 29, date: '26.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
 
   /* ------------------------------------------------------------- veri */
   const boot = S.load();
@@ -263,11 +263,14 @@
   ACT.archF = (el) => { archF = el.dataset.a; A.render(); };
   ACT.archQ = (el) => { archQ = el.value.trim(); A.render(); const i = $('input[type=search]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } };
 
+  /* Akış şeridi: turnuva kurulumundan çapraz tabloya adım adım */
+  const FLOW = ['Turnuva bilgisi', 'Sporcular', 'Kategoriler', 'Özet / oluştur', 'Tur ve zaman bilgileri', 'Kategori / tur başlat', 'Eşlendirme ve sonuç', 'Sıralama', 'Çapraz tablo'];
+  A.flowBar = (cur) => `<ol class="flow noprint" aria-label="Akış">${FLOW.map((l, i) => `<li class="${i + 1 === cur ? 'on' : i + 1 < cur ? 'done' : ''}">${l}</li>`).join('')}</ol>`;
   /* ============================================================= SİHİRBAZ */
   let W = null;
   function wizReset() {
     const d = today();
-    W = { step: 1, info: { name: '', date: d, dateEnd: '', place: '', arbiter: '', tempo: '', refYear: yearOf(d) }, refManual: false, src: null, wb: null, raw: [], manual: [],
+    W = { step: 1, info: { name: '', date: d, dateEnd: '', place: '', arbiter: '', tempo: '35+30', refYear: yearOf(d) }, refManual: false, src: null, wb: null, raw: [], manual: [],
       ageGroups: [], copy: false, stay: new Set(), names: {}, off: new Set(), merges: [], extra: [], lastCat: '' };
   }
   const wizPlayers = () => W.raw.concat(W.manual);
@@ -290,16 +293,16 @@
     const resumed = wizHasData() && (W.step > 1 || W.raw.length || W.manual.length);
     if (!W) wizReset();
     const steps = ['Bilgi', 'Sporcular', 'Kategoriler', 'Özet'];
-    let h = `<h2>Yeni turnuva</h2>${resumed ? '<div class="note info bn"><span>Yarım kalan turnuva taslağınız devam ediyor.</span><button class="b sm sec" data-act="wiRestart">Baştan başla</button></div>' : ''}<ol class="steps">${steps.map((s, i) => `<li class="${W.step === i + 1 ? 'on' : W.step > i + 1 ? 'done' : ''}"><span>${i + 1}</span> ${s}</li>`).join('')}</ol>`;
+    let h = `<h2>Yeni turnuva</h2>${resumed ? '<div class="note info bn"><span>Yarım kalan turnuva taslağınız devam ediyor.</span><button class="b sm sec" data-act="wiRestart">Baştan başla</button></div>' : ''}${A.flowBar(W.step)}`;
     h += [wiStep1, wiStep2, wiStep3, wiStep4][W.step - 1]();
     return h;
   }
   const wnav = (back, next, nextLabel, disabled) => `<div class="row tight wnav"><button class="b sec" data-act="wiGo" data-a="${back}">${back ? '← Geri' : 'Vazgeç'}</button>${next ? `<button class="b" data-act="wiGo" data-a="${next}" ${disabled ? 'disabled' : ''}>${nextLabel || 'İleri →'}</button>` : ''}</div>`;
   function wiStep1() {
     const f = (k, l, ph, type) => `<div><label>${l}</label><input data-act="wi" data-a="${k}" type="${type || 'text'}" value="${esc(W.info[k] || '')}" ${ph ? `placeholder="${esc(ph)}"` : ''} maxlength="120"></div>`;
-    return `<div class="card"><div class="row">${f('name', 'Turnuva adı *', 'Örn. 3. Mübin Boysan Anma Turnuvası')}${f('date', 'Başlama tarihi', '', 'date')}${f('dateEnd', 'Bitiş tarihi', '', 'date')}</div>
-      <div class="row" style="margin-top:10px">${f('place', 'Yer', 'Rize')}${f('arbiter', 'Başhakem')}${f('tempo', 'Zaman kontrolü', '15+10')}
-      <div><label>Yaş hesabı yılı</label><input type="number" data-act="wi" data-a="refYear" min="1990" max="2100" value="${W.info.refYear}"><small class="muted">Yaş = bu yıl − doğum yılı</small></div></div></div>${wnav(0, 2, 'İleri →')}`;
+    return `<div class="card"><div class="row frm">${f('name', 'Turnuva adı *', 'Örn. 3. Mübin Boysan Anma Turnuvası')}${f('date', 'Başlama tarihi', '', 'date')}${f('dateEnd', 'Bitiş tarihi', '', 'date')}</div>
+      <div class="row frm" style="margin-top:10px">${f('place', 'Yer', 'Rize')}${f('arbiter', 'Başhakem')}${f('tempo', 'Zaman kontrolü', '35+30')}
+      <div><label>Yaş hesabı yılı</label><input type="number" data-act="wi" data-a="refYear" min="1990" max="2100" value="${W.info.refYear}"><small class="muted">Yaş = bu yıl − doğum yılı</small></div></div><div class="note info">Başlama / bitiş tarihi ve zaman kontrolü, kategorilerin <b>Tur ve zaman bilgileri</b> sayfasına otomatik taşınır (1. tur 10:00, turlar arası 150 dk).</div></div>${wnav(0, 2, 'İleri →')}`;
   }
   ACT.wi = (el) => {
     const k = el.dataset.a; let v = el.value.trim();
@@ -442,7 +445,8 @@
   };
 
   /* ============================================================= TURNUVA ÇERÇEVESİ */
-  const TABS = [['ayar', 'Ayar'], ['spor', 'Sporcular'], ['rounds', 'Turlar'], ['stand', 'Sıralama'], ['cross', 'Çapraz Tablo']];
+  const TABS = [['spor', 'Sporcular'], ['ayar', 'Tur ve zaman bilgileri'], ['rounds', 'Eşlendirme ve sonuç'], ['stand', 'Sıralama'], ['cross', 'Çapraz Tablo']];
+  const FLOWSTEP = { spor: 2, ayar: 5, rounds: 7, stand: 8, cross: 9 };
   function vTournament(ctx) {
     const { tn, cat } = ctx;
     if (!tn) return '<div class="note">Turnuva bulunamadı.</div>';
@@ -455,6 +459,7 @@
         <button class="ctab add" data-act="addCat">+ Kategori</button></div>`;
     if (R_.cid === 'ayarlar') return h + vTnSettings(tn);
     if (!cat) return h + '<div class="note">Bu turnuvada henüz kategori yok. “+ Kategori” ile ekleyin.</div>';
+    h += A.flowBar(cat.started && R_.tab === 'ayar' ? 6 : (FLOWSTEP[R_.tab] || 2));
     h += `<div class="subtabs noprint">${TABS.map(([k, l]) => `<a class="${R_.tab === k ? 'on' : ''}" href="#/t/${tn.id}/${cat.id}/${k}">${l}</a>`).join('')}</div>`;
     const v = A.views.cat;
     return h + (v ? v(R_.tab, tn, cat) : '<div class="note err">Modül yüklenemedi.</div>');
@@ -464,8 +469,8 @@
   function vTnSettings(tn) {
     const inf = (k, label, ph, type) => `<div><label>${label}</label><input data-act="info" data-a="${k}" type="${type || 'text'}" value="${esc(tn.info[k] == null ? '' : tn.info[k])}" ${ph ? `placeholder="${esc(ph)}"` : ''} maxlength="150"></div>`;
     return `<h2>Turnuva ayarları</h2><div class="card">
-      <div class="row">${inf('name', 'Turnuva adı')}${inf('date', 'Başlama tarihi', '', 'date')}${inf('dateEnd', 'Bitiş tarihi', '', 'date')}</div>
-      <div class="row" style="margin-top:10px">${inf('place', 'Yer')}${inf('organizer', 'Organizatör(ler)')}${inf('tempo', 'Zaman kontrolü', '35+30')}${inf('federation', 'Federasyon', 'TUR')}</div>
+      <div class="row frm">${inf('name', 'Turnuva adı')}${inf('date', 'Başlama tarihi', '', 'date')}${inf('dateEnd', 'Bitiş tarihi', '', 'date')}</div>
+      <div class="row frm" style="margin-top:10px">${inf('place', 'Yer')}${inf('organizer', 'Organizatör(ler)')}${inf('tempo', 'Zaman kontrolü', '35+30')}${inf('federation', 'Federasyon', 'TUR')}</div>
       <div class="row" style="margin-top:10px">${inf('director', 'Turnuva direktörü')}${inf('arbiter', 'Başhakem')}${inf('deputy', 'Başhakem yardımcısı')}${inf('referees', 'Hakemler')}</div>
       <div class="row" style="margin-top:10px">${inf('web', 'İnternet sayfası')}${inf('email', 'E-posta')}<div><label>Yaş hesabı yılı</label><input type="number" data-act="info" data-a="refYear" value="${tn.info.refYear || yearOf(tn.info.date)}" min="1990" max="2100"></div></div></div>
       <h2>Kategoriler</h2><div class="card"><table><tr><th>Kategori</th><th class="n">Sporcu</th><th class="n">Tur</th><th>Durum</th><th></th></tr>

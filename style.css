@@ -220,3 +220,17 @@ label.b.sm{padding:6px 12px;min-height:38px}
   .tbl-order .b.sm{min-width:44px;min-height:44px}
   table td:has(>input[type=checkbox]){padding:10px}
 }
+
+/* v29: hizalı form satırları + akış şeridi */
+.row.frm{align-items:flex-start}
+.row.frm>div{display:flex;flex-direction:column}
+.row.frm select,.row.frm input{height:40px}
+.row.frm small{margin-top:4px;min-height:16px}
+.flow{display:flex;gap:4px;list-style:none;padding:0;margin:0 0 12px;flex-wrap:wrap;counter-reset:f}
+.flow li{flex:1 1 84px;position:relative;background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 8px 6px 26px;font-size:12.5px;line-height:1.25;color:var(--mut);counter-increment:f}
+.flow li:before{content:counter(f);position:absolute;left:6px;top:6px;width:16px;height:16px;border-radius:50%;background:#e5ebe3;font-size:11px;font-weight:700;display:grid;place-items:center;color:#333}
+.flow li:not(:last-child):after{content:"›";position:absolute;right:-8px;top:50%;transform:translateY(-50%);color:var(--mut);font-weight:700;z-index:1}
+.flow li.on{border-color:var(--g2);color:var(--g);font-weight:700}.flow li.on:before{background:var(--g2);color:#fff}
+.flow li.done:before{background:var(--bd2);color:#fff}
+.flow li a{color:inherit;text-decoration:none;display:block}
+@media print{.flow{display:none}}

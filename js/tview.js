@@ -20,6 +20,7 @@
   A.views.cat = (tab, tn, c) => ({ ayar: vAyar, spor: vSpor, rounds: vRounds, stand: vStand, cross: vCross, help: vHelp }[tab] || vSpor)(tn, c);
   const onlyDone = () => { const { tn } = CT(); return tn; };
   ACT.goR = (el) => { rv[CAT().id] = +el.dataset.a; A.render(); };
+  ACT.goAyar = () => { const { tn, cat } = CT(); A.go(A.tnPath(tn, cat.id, 'ayar')); };
   ACT.goStand = () => { const { tn, cat } = CT(); A.go(A.tnPath(tn, cat.id, 'stand')); };
   ACT.print = () => A.doPrint();
 
@@ -37,12 +38,13 @@
     const s = c.settings, n = c.players.length, sug = M.suggest(c), sys = M.sysOf(c), started = c.started;
     const tr = M.totalRounds(c);
     const label = s.roundsManual ? '<span class="pill warn" title="Hakem tarafından elle değiştirildi">Elle</span>' : (sug.rounds != null ? `<span class="pill" title="${esc(sug.note)}">Öneri (${n} sporcu)</span>` : '<span class="pill err">Öneri yok</span>');
-    let h = `<h2>${esc(c.name)} – sistem ve ayarlar</h2><div class="card">
+    autoSched(tn, c);
+    let h = `<h2>${esc(c.name)} – tur ve zaman bilgileri</h2><div class="card">
       <div class="kv"><div><small>Sporcu sayısı</small><b>${n}</b></div><div><small>Sistem</small><b style="font-size:16px">${n >= 3 ? sysName(sys) : '—'}</b></div>
       <div><small>Tur sayısı</small><b>${tr || '—'}</b></div><div><small>Durum</small><b style="font-size:16px">${started ? 'Başladı' : 'Kayıt / hazırlık'}</b></div></div>
       <div class="note info">Prosedür md.17(4): Sistem ve tur sayısı <b>teknik toplantıda</b> duyurulur, “Kategoriyi başlat” ile kilitlenir. ${esc(sug.note)}</div>`;
     if (n >= 129 && !s.roundsManual && !started) h += `<div class="note err">${n} sporcu için otomatik öneri yoktur (kuralda 128’e kadar tanımlı). Tur sayısını hakem olarak siz girin (bilgi: ceil(log₂ ${n}) = ${sug.log2}).</div>`;
-    h += '<div class="row">';
+    h += '<div class="row frm">';
     h += `<div><label>Eşlendirme sistemi</label><select data-act="setSys" ${started || n < 3 ? 'disabled' : ''}><option value="swiss" ${sys === 'swiss' ? 'selected' : ''}>İsviçre</option><option value="berger" ${sys === 'berger' ? 'selected' : ''}>Berger (döner)</option></select>
       <small class="muted">${c.sysPref ? 'Elle seçildi' : 'Öneri: ' + (n >= 10 ? 'İsviçre (10+)' : 'Berger (9 ve altı)')}</small></div>`;
     if (sys === 'swiss') h += `<div><label>İsviçre tur sayısı ${label}</label><input type="number" min="1" max="30" data-act="setRounds" value="${s.rounds == null ? '' : s.rounds}" placeholder="girin" ${started ? 'disabled' : ''}>
@@ -53,8 +55,9 @@
     if (sys === 'swiss' && s.rounds > n - 1 && n > 1) h += `<div class="note">Tur sayısı (${s.rounds}) sporcu sayısından (${n}) fazla görünüyor; eşlendirme yapılamayabilir.</div>`;
     if (sys === 'swiss' && n >= 3 && n < 10 && !started) h += `<div class="note">${n} sporcu için Berger önerilir; İsviçre seçtiniz.</div>`;
     if (sys === 'berger' && n > 9 && !started) h += `<div class="note">${n} sporcu için İsviçre önerilir; Berger seçtiniz (${R.bergerRounds(n, s.double)} tur).</div>`;
-    h += `<div class="row tight" style="margin-top:12px">${!started ? `<button class="b" data-act="start" ${n < 3 || (sys === 'swiss' && !(tr >= 1)) ? 'disabled title="Önce tur sayısını girin"' : ''}>Kategoriyi başlat</button>` : `<button class="b sec" data-act="unstart" ${c.rounds.some(r => r.pairings.some(p => p.result)) ? 'disabled' : ''}>Başlatmayı geri al</button>`}</div></div>`;
-    return h + schedCard(c) + tbSettings(c);
+    h += '</div>';
+    const startRow = `<div class="card"><div class="note info">Ayarlar ve tur programı tamam ise <b>İleri</b> ile kategoriyi başlatın; ardından eşlendirme yapılır.</div><div class="row tight" style="margin-top:12px">${!started ? `<button class="b big" data-act="start" ${n < 3 || (sys === 'swiss' && !(tr >= 1)) ? 'disabled title="Önce tur sayısını girin"' : ''}>İleri → Kategoriyi / turları başlat</button>` : `<button class="b sec" data-act="unstart" ${c.rounds.some(r => r.pairings.some(p => p.result)) ? 'disabled' : ''}>Başlatmayı geri al</button> <a class="b" href="#/t/${tn.id}/${c.id}/rounds">Eşlendirmeye git →</a>`}</div></div>`;
+        return h + schedCard(tn, c) + tbSettings(c) + startRow;
   }
   ACT.setSys = guard((el) => { try { M.setSystem(CAT(), el.value); A.save(); } catch (e) { A.toast(e.message); } A.render(); });
   ACT.setRounds = guard((el) => { try { M.setRounds(CAT(), el.value); A.save(); } catch (e) { A.toast(e.message); } A.render(); });
@@ -69,43 +72,49 @@
   });
   ACT.unstart = guard(async () => { const c = CAT(); if (!(await A.ask('Başlatma geri alınsın mı? (Berger tablosu / eşlendirmeler silinir)', { ok: 'Geri al', danger: true }))) return; try { M.unstartCategory(c); } catch (e) { return A.toast(e.message); } A.save(); A.render(); });
 
-  function schedCard(c) {
+  /* Tur programı: turnuva başlama/bitiş tarihinden otomatik (1. tur 10:00, turlar arası 150 dk; kayıt kontrol 1 saat, teknik toplantı yarım saat önce) */
+  const toMin = (t) => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; };
+  const hmStr = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+  const addDay = (d, k) => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() + k); return dt.toISOString().slice(0, 10); };
+  function autoSched(tn, c, force) {
+    const S = sched(c); if (force) S.manual = false;
+    const d0 = tn.info && tn.info.date; if (S.manual || !d0 || isNaN(new Date(d0 + 'T12:00:00'))) return;
+    const Rn = M.totalRounds(c) || 6, iv = S.iv || 150, t1 = toMin(S.t1 || '10:00') != null ? toMin(S.t1 || '10:00') : 600;
+    const dE = tn.info.dateEnd && tn.info.dateEnd >= d0 ? tn.info.dateEnd : d0;
+    const days = Math.max(1, Math.round((new Date(dE + 'T12:00:00') - new Date(d0 + 'T12:00:00')) / 864e5) + 1);
+    const per = Math.min(4, Math.max(1, Math.ceil(Rn / days)));
+    const rounds = []; let last = null;
+    for (let i = 0; i < Rn; i++) { const day = Math.floor(i / per), k = i % per; last = { d: addDay(d0, day), t: hmStr(t1 + k * iv) }; rounds.push(last); }
+    const next = { rounds, kayit: { d: d0, t: hmStr(Math.max(0, t1 - 60)), t2: hmStr(Math.max(0, t1 - 30)) }, teknik: { d: d0, t: hmStr(Math.max(0, t1 - 30)) }, odul: { d: last.d, t: hmStr(toMin(last.t) + iv) } };
+    const cur = JSON.stringify([S.rounds, S.kayit, S.teknik, S.odul]);
+    if (cur !== JSON.stringify([next.rounds, next.kayit, next.teknik, next.odul])) { Object.assign(S, next); A.save(); }
+  }
+  A.autoSched = autoSched;
+  function schedCard(tn, c) {
     const Rn = M.totalRounds(c) || 6, S = sched(c);
     const perDay = {}; for (let i = 0; i < Rn; i++) { const d = (S.rounds[i] || {}).d; if (d) perDay[d] = (perDay[d] || 0) + 1; }
     const over = Object.entries(perDay).filter(([d, k]) => k > 4);
     const inp = (k, type, v) => `<input type="${type}" data-act="sch" data-a="${k}" value="${esc(v || '')}" style="padding:6px">`;
-    return `<h2>Tur programı</h2><div class="card"><div class="row tight noprint"><button class="b sec" data-act="autoSch">Otomatik doldur</button></div>
+    return `<h2>Tur programı</h2><div class="card"><div class="row frm noprint"><div><label>1. tur saati</label><input type="time" data-act="schT1" value="${esc(S.t1 || '10:00')}"></div>
+      <div><label>Turlar arası (dk)</label><input type="number" min="30" max="300" data-act="schIv" value="${S.iv || 150}"></div>
+      <div><label>&nbsp;</label><button class="b sec" data-act="autoSch" style="height:40px">${S.manual ? 'Otomatiğe dön' : 'Yeniden hesapla'}</button></div></div>
+      <p class="muted" style="margin:6px 0 0">${tn.info.date ? (S.manual ? 'Program elle değiştirildi.' : `Program turnuva tarihlerinden (${esc(fmtDT(tn.info.date))}${tn.info.dateEnd ? ' – ' + esc(fmtDT(tn.info.dateEnd)) : ''}) otomatik hesaplanır; bir hücreyi değiştirirseniz elle moda geçer.`) : 'Turnuva ayarlarında başlama tarihi girilirse program otomatik dolar.'}</p>
       <div class="tblw" style="margin-top:8px"><table><tr><th>Etkinlik</th><th>Gün</th><th>Saat</th><th>Bitiş saati</th></tr>
       <tr><td>Kayıt kontrol</td><td>${inp('kayit|d', 'date', S.kayit.d)}</td><td>${inp('kayit|t', 'time', S.kayit.t)}</td><td>${inp('kayit|t2', 'time', S.kayit.t2)}</td></tr>
       <tr><td>Teknik toplantı</td><td>${inp('teknik|d', 'date', S.teknik.d)}</td><td>${inp('teknik|t', 'time', S.teknik.t)}</td><td></td></tr>
       ${Array.from({ length: Rn }, (_, i) => { const x = S.rounds[i] || {}; return `<tr><td><b>${i + 1}. Tur</b></td><td>${inp('r|' + i + '|d', 'date', x.d)}</td><td>${inp('r|' + i + '|t', 'time', x.t)}</td><td></td></tr>`; }).join('')}
       <tr><td>Ödül töreni</td><td>${inp('odul|d', 'date', S.odul.d)}</td><td>${inp('odul|t', 'time', S.odul.t)}</td><td class="muted">son turdan sonra</td></tr></table></div>
       ${over.length ? `<div class="note">Prosedür md.15/6: UKD hesaplamalarına dâhil etkinliklerde bir günde dörtten fazla tur oynatılamaz (${over.map(([d, k]) => fmtDT(d) + ': ' + k + ' tur').join('; ')}).</div>` : ''}
-      <div class="note info">Kayıt kontrol süresi 30–60 dakika olmalıdır (md.15/4); bir günlük program 12 saati aşamaz.</div></div>`;
+      <div class="note info">Kayıt kontrol 30–60 dakika olmalıdır (md.15/4): varsayılan, 1. turdan 1 saat önce başlar, teknik toplantı 1. turdan yarım saat önce yapılır.</div></div>`;
   }
   ACT.sch = guard((el) => {
-    const S = sched(CAT()), p = el.dataset.a.split('|');
+    const S = sched(CAT()), p = el.dataset.a.split('|'); S.manual = true;
     if (p[0] === 'r') { const i = +p[1]; S.rounds[i] = S.rounds[i] || {}; S.rounds[i][p[2]] = el.value; } else S[p[0]][p[1]] = el.value;
     A.save(); A.render();
   });
-  ACT.autoSch = guard(() => {
-    const c = CAT(), Rn = M.totalRounds(c) || 6;
-    A.dialog(`<h3>Tur programını otomatik doldur</h3><div class="row"><div><label>1. gün</label><input type="date" id="as_d"></div><div><label>1. tur saati</label><input type="time" id="as_t" value="09:30"></div></div>
-      <div class="row" style="margin-top:8px"><div><label>Günde en çok tur</label><input type="number" id="as_n" value="3" min="1" max="4"></div><div><label>Tur başlangıçları arası (dk)</label><input type="number" id="as_i" value="150" min="30"></div><div><label>2. gün ve sonrası ilk tur saati</label><input type="time" id="as_t2" value="09:00"></div></div>
-      <p class="muted">Örnek: 3 tur/gün, 150 dk → 09:30, 12:00, 14:30; ertesi gün 09:00. ${Rn} tur doldurulacak.</p>
-      <div class="row tight"><button class="b" id="ok">Doldur</button><button class="b sec" data-close>Vazgeç</button></div>`, d => {
-      $('#ok', d).onclick = () => {
-        const d0 = $('#as_d', d).value; if (!d0) return A.toast('1. günü seçin');
-        const per = +$('#as_n', d).value || 3, iv = +$('#as_i', d).value || 150; const S = sched(c); S.rounds = [];
-        const toMin = (s) => { const [h, m] = s.split(':'); return +h * 60 + +m; }, hm = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
-        for (let i = 0; i < Rn; i++) {
-          const day = Math.floor(i / per), k = i % per; const dt = new Date(d0 + 'T12:00:00'); dt.setDate(dt.getDate() + day);
-          S.rounds.push({ d: dt.toISOString().slice(0, 10), t: hm(toMin(day === 0 ? $('#as_t', d).value : $('#as_t2', d).value) + k * iv) });
-        }
-        d.close(); A.save(); A.render();
-      };
-    });
-  });
+  ACT.schT1 = guard((el) => { const c = CAT(), { tn } = CT(); sched(c).t1 = el.value || '10:00'; autoSched(tn, c, true); A.save(); A.render(); });
+  ACT.schIv = guard((el) => { const c = CAT(), { tn } = CT(); sched(c).iv = Math.max(30, Math.min(300, +el.value || 150)); autoSched(tn, c, true); A.save(); A.render(); });
+  ACT.autoSch = guard(() => { const c = CAT(), { tn } = CT(); autoSched(tn, c, true); A.save(); A.render(); });
   function tbSettings(c) {
     const sys = M.sysOf(c), key = sys === 'swiss' ? 'tbSwiss' : 'tbBerger', order = c.settings[key];
     const rest = Object.keys(E.TB_DEFS).filter(k => !order.includes(k));
@@ -138,14 +147,15 @@
       ${c.started && c.system === 'swiss' && !canAdd ? '<div class="note">Prosedür md.17(3): 2. tur eşlendirmesi duyurulduktan sonra yeni sporcu alınmaz.</div>' : ''}
       ${locked ? '<div class="note">Berger turnuvası başladı; sporcu listesi kilitli (çekilme yapılabilir).</div>' : ''}</div>
     <div class="card"><div class="tblw fit"><table><tr><th class="n">No</th><th>Ad Soyad</th><th>Kulüp</th><th>Fed</th><th class="n">Doğum</th><th class="n">UKD</th><th class="n">ELO</th><th>FIDE No</th><th>Unvan</th><th>Durum</th><th class="noprint"></th></tr>
-    ${players.map(p => { const wd = p.status === 'withdrawn'; return `<tr class="${wd ? 'out' : ''}"><td class="n">${p.no || ''}</td><td><b>${esc(p.ad)} ${esc(p.soyad)}</b>${p.female ? ' <span class="pill gray">K</span>' : ''}${other[p.kisiId] ? ` <span class="pill gray" title="${esc(other[p.kisiId].join(', '))}">+${other[p.kisiId].length} kategori</span>` : ''}</td>
+    ${players.map(p => { const wd = p.status === 'withdrawn'; return `<tr class="${wd ? 'out' : ''}"><td class="n">${p.no || ''}</td><td><b>${esc(nmt(p))}</b>${p.female ? ' <span class="pill gray">K</span>' : ''}${other[p.kisiId] ? ` <span class="pill gray" title="${esc(other[p.kisiId].join(', '))}">+${other[p.kisiId].length} kategori</span>` : ''}</td>
       <td title="${esc(p.club)}">${esc(String(p.club || '').length > 25 ? String(p.club).slice(0, 25) + '…' : p.club)}</td><td>${esc(p.fed)}</td><td class="n">${esc(p.birthYear || '')}</td><td class="n">${p.rating || ''}</td><td class="n">${p.elo || ''}</td><td>${esc(p.fideNo)}</td><td>${esc(p.title || '')}</td>
       <td>${wd ? `<span class="pill err">çekildi${p.wdFrom ? ' (' + p.wdFrom + '. turdan)' : ''}</span>` : (p.joinRound > 1 ? '<span class="pill warn">' + p.joinRound + '. turdan</span>' : '<span class="pill">aktif</span>')}</td>
       <td class="noprint act-cell"><button class="b sm sec" data-act="editP" data-a="${p.id}" ${locked ? 'disabled' : ''}>Düzenle</button>
         ${others.length && can ? `<button class="b sm sec" data-act="moveP" data-a="${p.id}">Kategori</button>` : ''}
         ${wd ? `<button class="b sm sec" data-act="reactP" data-a="${p.id}">Geri al</button>` : (c.started && !can && c.system === 'swiss' ? `<button class="b sm red" data-act="wdP" data-a="${p.id}">Çekilme</button>` : '')}
         ${can ? `<button class="b sm red" data-act="delP" data-a="${p.id}">Sil</button>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="11" class="muted">Henüz sporcu eklenmedi. Excel/CSV içe aktarın, tablodan yapıştırın veya tek tek ekleyin.</td></tr>'}
-    </table></div></div>`;
+    </table></div></div>
+    <div class="row tight noprint wnav" style="margin-top:12px"><button class="b" data-act="goAyar" ${n < 3 ? 'disabled title="En az 3 sporcu gerekli"' : ''}>İleri → Tur ve zaman bilgileri</button></div>`;
   }
   /* Şablonun TÜM bilgi alanları tek formda (Sporcu ekle/düzenle + sihirbaz elle ekleme). x: id öneki. */
   const TITLES = ['GM', 'IM', 'WGM', 'FM', 'WIM', 'CM', 'WFM', 'WCM'];
@@ -299,7 +309,8 @@
   /* ============================================================= TURLAR */
   const completed = (c) => M.completedRounds(c);
   function vRounds(tn, c) {
-    if (!c.started) return `<h2>Turlar</h2><div class="card"><div class="note">Bu kategori henüz başlatılmadı. “Ayar” sekmesinde sistemi ve tur sayısını kontrol edip <b>Kategoriyi başlat</b>’a basın.</div><a class="b" href="#/t/${tn.id}/${c.id}/ayar">Ayar sekmesine git</a></div>`;
+    if (!c.started) return `<h2>Turlar</h2><div class="card"><div class="note">Bu kategori henüz başlatılmadı. “Tur ve zaman bilgileri” sekmesinde sistemi, tur sayısını ve programı kontrol edip <b>İleri</b> ile kategoriyi başlatın’a basın.</div><a class="b" href="#/t/${tn.id}/${c.id}/ayar">Ayar sekmesine git</a></div>`;
+    autoSched(tn, c);
     const sys = c.system, Rn = M.totalRounds(c), cr = completed(c);
     let view = rv[c.id] != null ? rv[c.id] : 1;
     let h = `<h2>${sysName(sys)} <small class="muted">• ${Rn} tur • ${esc(c.name)}</small></h2>`;
