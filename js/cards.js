@@ -2,6 +2,13 @@
 (function (root) {
   'use strict';
   const FAM = 'Arial, "Liberation Sans", Helvetica, sans-serif';
+  /** Yaka kartı yazı tipleri (cihazda hazır gelenler; Türkçe karakter destekli) */
+  const FONTS = [['arial', 'Arial (varsayılan)', FAM], ['georgia', 'Georgia (klasik)', 'Georgia, "DejaVu Serif", serif'], ['times', 'Times New Roman', '"Times New Roman", "Liberation Serif", Times, serif'],
+    ['trebuchet', 'Trebuchet MS', '"Trebuchet MS", "DejaVu Sans", sans-serif'], ['verdana', 'Verdana (geniş)', 'Verdana, "DejaVu Sans", sans-serif'], ['tahoma', 'Tahoma', 'Tahoma, "DejaVu Sans", sans-serif'],
+    ['palatino', 'Palatino', '"Palatino Linotype", Palatino, "Book Antiqua", serif'], ['courier', 'Courier New (daktilo)', '"Courier New", "Liberation Mono", monospace']];
+  const famOf = (k) => (FONTS.find(f => f[0] === k) || FONTS[0])[2];
+  let curFam = FAM;
+  const LOGO = 'logo-tsf.jpg';
   const PER = 4;
   const paginate = (arr, per) => { per = per || PER; const o = []; for (let i = 0; i < arr.length; i += per) o.push(arr.slice(i, i + per)); return o; };
   const sheetCount = (n) => Math.ceil(n / PER);
@@ -21,6 +28,17 @@
     const pt = Math.round(o.maxPt * o.maxMm / w * 10) / 10;
     if (pt >= o.minPt) return { pt, wrap: false };
     return { pt: o.minPt, wrap: m(text, o.minPt) > o.maxMm };
+  }
+
+  /** Kutuya (wMm × hMm) sığan en büyük yazı boyu: sözcük sarmalı; minPt altına inmez. {pt, lines} */
+  function wrapFit(text, wMm, hMm, maxPt, minPt, measure) {
+    const m = measure || estWidthMm, words = String(text).split(/\s+/).filter(Boolean);
+    for (let pt = maxPt; pt >= minPt; pt -= 0.5) {
+      let lines = 1, cur = '';
+      for (const w of words) { const t = cur ? cur + ' ' + w : w; if (cur && m(t, pt) > wMm) { lines++; cur = w; } else cur = t; }
+      if (lines * pt * 1.15 * PT_MM <= hMm && words.every(w => m(w, pt) <= wMm)) return { pt, lines };
+    }
+    return { pt: minPt, lines: null };
   }
 
   const YAKA = { w: 90, h: 120, maxMm: 76, name: { maxPt: 22, minPt: 12 }, club: { maxPt: 20, minPt: 11 } };
@@ -44,7 +62,7 @@
   let _ctx = null;
   function canvasMeasure(text, pt) {
     if (!_ctx) _ctx = document.createElement('canvas').getContext('2d');
-    _ctx.font = 'bold ' + (pt * 96 / 72) + 'px ' + FAM;
+    _ctx.font = 'bold ' + (pt * 96 / 72) + 'px ' + curFam;
     return _ctx.measureText(text).width * 25.4 / 96;
   }
   function el(tag, cls, css, txt) {
@@ -59,7 +77,7 @@
   function img(parent, url, x, y, w, h) { if (!url) return null; const b = box(parent, x, y, w, h); const i = document.createElement('img'); i.src = url; i.alt = ''; i.className = 'fillimg'; b.appendChild(i); return b; }
   function textBox(parent, text, x, y, w, h, spec, extra) {
     const f = fit(text, { maxPt: spec.maxPt, minPt: spec.minPt, maxMm: spec.maxMm || w - 2 }, canvasMeasure);
-    const b = box(parent, x, y, w, h, Object.assign({ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontWeight: '700', fontFamily: FAM, fontSize: f.pt + 'pt', lineHeight: '1.05', whiteSpace: f.wrap ? 'normal' : 'nowrap', overflow: 'hidden' }, extra || {}));
+    const b = box(parent, x, y, w, h, Object.assign({ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontWeight: '700', fontFamily: curFam, fontSize: f.pt + 'pt', lineHeight: '1.05', whiteSpace: f.wrap ? 'normal' : 'nowrap', overflow: 'hidden' }, extra || {}));
     b.textContent = text; return b;
   }
   const PAWN = 'M12 2a3.5 3.5 0 0 0-2 6.4C8.7 9.3 8 10.8 8 12h8c0-1.2-.7-2.7-2-3.6A3.5 3.5 0 0 0 12 2zM7 13l-1 4h12l-1-4H7zM5 18l-1 3h16l-1-3H5z';
@@ -74,22 +92,39 @@
       .forEach(([a, b, lw, lh]) => parent.appendChild(el('div', 'abs', { left: mm(a), top: mm(b), width: lw ? mm(lw) : '0', height: lh ? mm(lh) : '0', borderTop: lw ? '0.2mm solid ' + c : '0', borderLeft: lh ? '0.2mm solid ' + c : '0' })));
   }
 
+  function headText(parent, text, x, y, w, h) {
+    const f = wrapFit(text, w - 2, h, 20, 10, canvasMeasure);
+    const b = box(parent, x, y, w, h, { display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontWeight: '700', fontFamily: curFam, fontSize: f.pt + 'pt', lineHeight: '1.15', color: '#111', overflow: 'hidden' });
+    b.textContent = text; return b;
+  }
+  function footText(parent, dates, place, x, y, w, h) {
+    if (!dates && !place) return null;
+    const b = box(parent, x, y, w, h, { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontFamily: curFam, color: '#111', overflow: 'hidden' });
+    if (dates) { const f = fit(dates, { maxPt: 12, minPt: 8, maxMm: w - 2 }, canvasMeasure); b.appendChild(el('div', null, { fontWeight: '700', fontSize: f.pt + 'pt', lineHeight: '1.2' }, dates)); }
+    if (place) { const f = wrapFit(place, w - 2, dates ? h - 5.5 : h, 10, 6.5, canvasMeasure); b.appendChild(el('div', null, { fontWeight: '600', fontSize: f.pt + 'pt', lineHeight: '1.15' }, place)); }
+    return b;
+  }
+
   /** items: [{p, cat}] (en çok 4). imgs: {header,footer,logoL,logoR,cardBg} url'leri. */
   function yakaSheet(items, imgs, o) {
     o = o || {};
     const sh = el('div', 'sheet');
+    curFam = famOf(o.font);
     items.forEach((it, i) => {
       const pos = yakaPos(i, o), c = box(sh, pos.x, pos.y, YAKA.w, YAKA.h, { border: '0.2mm solid #999', overflow: 'hidden', background: '#fff' });
       c.classList.add('ykc');
-      if (imgs.cardBg) { const b = img(c, imgs.cardBg, 0, 0, YAKA.w, YAKA.h); b.style.opacity = String(Math.max(0.05, Math.min(1, (+o.bg || 18) / 100))); } else c.classList.add('ykbg');
-      img(c, imgs.yHeader, 9, 11, 72, 36);
+      const op = String(Math.max(0.05, Math.min(1, (+o.bg || 25) / 100)));
+      if (imgs.cardBg) { const b = img(c, imgs.cardBg, 0, 0, YAKA.w, YAKA.h); b.style.opacity = op; }
+      else { const b = img(c, LOGO, 10, 22, 70, 70); b.style.opacity = op; }   // varsayılan: federasyon logosu filigranı
+      if (imgs.yHeader) img(c, imgs.yHeader, 9, 11, 72, 36);
+      else if (o.title) headText(c, o.title, 9, 11, 72, 36);
       c.appendChild(el('div', 'abs', { left: mm(14), top: mm(50.5), width: mm(62), height: '0', borderTop: '0.35mm solid #444' }));
       const pw = el('div', 'abs', { left: mm(41.5), top: mm(48), width: mm(7), height: mm(5), background: '#fff' }); c.appendChild(pw); pawnSvg(c, 42, 47.7, 6);
       const L = yakaLines(it.p), W = YAKA.maxMm;
       textBox(c, L.l1, 7, 55, 76, 11, { maxPt: YAKA.name.maxPt, minPt: YAKA.name.minPt, maxMm: W });
       textBox(c, L.l2, 7, 66, 76, 11, { maxPt: YAKA.name.maxPt, minPt: YAKA.name.minPt, maxMm: W });
       if (L.club) textBox(c, L.club, 7, 82, 76, 10, { maxPt: YAKA.club.maxPt, minPt: YAKA.club.minPt, maxMm: W }, { fontWeight: '600' });
-      img(c, imgs.footer, 9, 99, 72, 17);
+      if (imgs.footer) img(c, imgs.footer, 9, 99, 72, 17); else footText(c, o.dates, o.place, 9, 99, 72, 17);
       if (o.marks) cutMarks(sh, pos.x, pos.y, YAKA.w, YAKA.h);
     });
     return sh;
@@ -97,6 +132,7 @@
   function masaSheet(items, imgs, o) {
     o = o || {};
     const sh = el('div', 'sheet');
+    curFam = FAM;
     MASA.cuts.forEach(y => sh.appendChild(el('div', 'abs', { left: '0', top: mm(y), width: mm(210), height: '0', borderTop: '0.2mm solid #888' })));
     items.forEach((it, i) => {
       const top = MASA.top + i * MASA.pitch, d = masaData(it.p, it.cat, o);
@@ -120,6 +156,6 @@
     return sh;
   }
 
-  const API = { FAM, PER, paginate, sheetCount, estWidthMm, fit, YAKA, MASA, yakaLines, masaData, yakaPos, yakaSheet, masaSheet, canvasMeasure };
+  const API = { FONTS, famOf, wrapFit, FAM, PER, paginate, sheetCount, estWidthMm, fit, YAKA, MASA, yakaLines, masaData, yakaPos, yakaSheet, masaSheet, canvasMeasure };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.Cards = API;
 })(typeof window !== 'undefined' ? window : globalThis);

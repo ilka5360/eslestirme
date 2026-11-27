@@ -88,11 +88,11 @@
   const kcS = {};
   const kc = (tn) => {
     if (!kcS[tn.id]) kcS[tn.id] = { tab: 'yaka', cats: null, ex: new Set(), sort: 'no', withdrawn: false, merge: false, page: 0,
-      layout: (tn.card.yaka && tn.card.yaka.layout) || 'center', dx: (tn.card.yaka && +tn.card.yaka.dx) || 0, dy: (tn.card.yaka && +tn.card.yaka.dy) || 0, marks: !!(tn.card.yaka && tn.card.yaka.marks), bg: (tn.card.yaka && +tn.card.yaka.bg) || 18, dashZero: !!(tn.card.masa && tn.card.masa.dashZero) };
+      layout: (tn.card.yaka && tn.card.yaka.layout) || 'center', dx: (tn.card.yaka && +tn.card.yaka.dx) || 0, dy: (tn.card.yaka && +tn.card.yaka.dy) || 0, marks: !!(tn.card.yaka && tn.card.yaka.marks), bg: (tn.card.yaka && +tn.card.yaka.bg) || 25, font: (tn.card.yaka && tn.card.yaka.font) || 'arial', dashZero: !!(tn.card.masa && tn.card.masa.dashZero) };
     return kcS[tn.id];
   };
   const SLOTS_BY = {
-    yaka: [['yHeader', 'Yaka başlık görseli', 'Kartın üst alanı · 90×120 mm kart, alan 72×36 mm', '850 × 425 px (2:1, 300 dpi)'], ['footer', 'Yaka alt logo şeridi', 'Kartın alt kısmı · alan 72×17 mm', '850 × 200 px (≈4,2:1, 300 dpi)'], ['cardBg', 'Yaka arka planı', 'İsteğe bağlı filigran (netlik ayarlanabilir, varsayılan %18); yoksa satranç deseni · 90×120 mm', '1063 × 1417 px (3:4, 300 dpi)']],
+    yaka: [['yHeader', 'Yaka başlık görseli', 'Kartın üst alanı · 90×120 mm kart, alan 72×36 mm', '850 × 425 px (2:1, 300 dpi)'], ['footer', 'Yaka alt logo şeridi', 'Kartın alt kısmı · alan 72×17 mm', '850 × 200 px (≈4,2:1, 300 dpi)'], ['cardBg', 'Yaka arka planı', 'İsteğe bağlı filigran (netlik ayarlanabilir); yoksa federasyon logosu filigran olur; yoksa satranç deseni · 90×120 mm', '1063 × 1417 px (3:4, 300 dpi)']],
     masa: [['header', 'Masa başlık görseli', 'Masa kartı ortası · iki logo varsa alan 95×19,5 mm, logo yoksa 139×19,5 mm', '1120 × 230 px (≈5:1, 300 dpi); logosuzsa 1640 × 230 px'], ['logoL', 'Masa sol logo', 'İsteğe bağlı · alan 22×21 mm', '260 × 250 px (300 dpi)'], ['logoR', 'Masa sağ logo (federasyon)', 'İsteğe bağlı · alan 19×21 mm', '225 × 250 px (300 dpi)']]
   };
   /* Yüklenen görsel bu piksele otomatik ayarlanır (300 dpi). cover: kırparak doldurur; diğerleri oranı koruyup sığdırır (şeffaf boşluk). */
@@ -123,8 +123,9 @@
       <label class="chk"><input type="checkbox" data-act="kcOptC" data-a="merge" ${st.merge ? 'checked' : ''}> Kategorileri birleştir (tek sayfa dizisi)</label>
       <label class="chk"><input type="checkbox" data-act="kcOptC" data-a="dashZero" ${st.dashZero ? 'checked' : ''}> Puansızsa “-” yaz (varsayılan: 0)</label></div>
       ${st.tab === 'yaka' ? `<div class="row" style="margin-top:8px"><div style="flex:0 1 200px"><label>Yerleşim</label><select data-act="kcOpt" data-a="layout"><option value="center" ${st.layout === 'center' ? 'selected' : ''}>Sayfada ortalı</option><option value="ornek" ${st.layout === 'ornek' ? 'selected' : ''}>Örnek dosyadaki konum</option></select></div>
+        <div style="flex:0 1 190px"><label>Yazı tipi</label><select data-act="kcOpt" data-a="font">${C.FONTS.map(f => `<option value="${f[0]}" ${st.font === f[0] ? 'selected' : ''} style="font-family:${f[2].replace(/"/g, "'")}">${f[1]}</option>`).join('')}</select></div>
         <div style="flex:0 1 130px"><label>Kaydır X (mm)</label><input type="number" step="0.5" min="-20" max="20" value="${st.dx}" data-act="kcOpt" data-a="dx"></div><div style="flex:0 1 130px"><label>Kaydır Y (mm)</label><input type="number" step="0.5" min="-20" max="20" value="${st.dy}" data-act="kcOpt" data-a="dy"></div>
-        <div style="flex:1 1 220px"><label>Arka plan netliği: %${st.bg}</label><input type="range" min="5" max="100" step="1" value="${st.bg}" data-act="kcOpt" data-a="bg" aria-label="Arka plan netliği"><small class="muted">%18 soluk · %100 tam net (yazılar okunmayabilir)</small></div>
+        <div style="flex:1 1 220px"><label>Arka plan netliği: %${st.bg}</label><input type="range" min="5" max="100" step="1" value="${st.bg}" data-act="kcOpt" data-a="bg" aria-label="Arka plan netliği"><small class="muted">%25 varsayılan · %100 tam net (yazılar okunmayabilir)</small></div>
         <label class="chk"><input type="checkbox" data-act="kcOptC" data-a="marks" ${st.marks ? 'checked' : ''}> Kesim işaretleri</label></div>` : ''}
       <div class="row tight" style="margin-top:10px"><button class="b sm sec" data-act="clubPaste">Kulüp adlarını toplu yapıştır</button><button class="b sm sec" data-act="kcAll">Tümünü seç / kaldır</button></div>
       <details style="margin-top:10px"><summary>Sporcu seçimi (${items.reduce((s, x) => s + x.ps.length, 0)} basılacak)</summary>${tn.cats.filter(c => sel.has(c.id)).map(c => `<h4 style="margin:8px 0 4px">${esc(c.name)}</h4><div class="tblw" style="max-height:260px"><table><tr><th></th><th class="n">No</th><th>Ad Soyad</th><th>Kulüp</th></tr>${c.players.map(p => `<tr class="${p.status === 'withdrawn' ? 'out' : ''}"><td><input type="checkbox" data-act="kcPl" data-a="${p.id}" ${st.ex.has(p.id) ? '' : 'checked'} aria-label="Seç"></td><td class="n">${p.no}</td><td>${esc(nm(p))}</td><td>${esc(p.club)}</td></tr>`).join('')}</table></div>`).join('')}</details></div>
@@ -140,7 +141,7 @@
   async function thumbs(tn) {
     for (const [k] of SLOTS) { const el = $(`[data-thumb="${k}"]`); if (el && tn.assets[k]) { const u = await S.getURL(tn.id, k); if (u) { const i = document.createElement('img'); i.src = u; i.alt = ''; el.textContent = ''; el.appendChild(i); } } }
   }
-  const sheetOpts = (st) => ({ bg: st.bg, layout: st.layout, dx: st.dx, dy: st.dy, marks: st.marks, dashZero: st.dashZero });
+  const sheetOpts = (st) => { const i = (A.ctx().tn || {}).info || {}, d = [fmtDate(i.date), i.dateEnd && i.dateEnd !== i.date ? fmtDate(i.dateEnd) : ''].filter(Boolean).join(' – '); return { title: i.name || '', dates: d, place: i.place || '', font: st.font, bg: st.bg, layout: st.layout, dx: st.dx, dy: st.dy, marks: st.marks, dashZero: st.dashZero }; };
   function buildSheet(st, imgs, chunk) { return st.tab === 'yaka' ? C.yakaSheet(chunk, imgs, sheetOpts(st)) : C.masaSheet(chunk, imgs, sheetOpts(st)); }
   function allChunks(groups) { const l = []; groups.forEach(g => C.paginate(g).forEach(ch => l.push(ch))); return l; }
   async function drawPreview(tn) {
@@ -165,7 +166,7 @@
     return chunks.length;
   };
   ACT.kcPrint = async () => { A.toast('Sayfalar hazırlanıyor…', 1500); const n = await A.tools.prepareCards(); if (n) A.doPrint(); };
-  const cardsSave = (tn, st) => { tn.card.yaka = { bg: st.bg, layout: st.layout, dx: st.dx, dy: st.dy, marks: st.marks }; tn.card.masa = { dashZero: st.dashZero }; A.save({ clean: true }); };
+  const cardsSave = (tn, st) => { tn.card.yaka = { font: st.font, bg: st.bg, layout: st.layout, dx: st.dx, dy: st.dy, marks: st.marks }; tn.card.masa = { dashZero: st.dashZero }; A.save({ clean: true }); };
   ACT.kcTab = (el) => { const { tn } = A.ctx(); const st = kc(tn); st.tab = el.dataset.a; st.page = 0; A.render(); };
   ACT.kcCat = (el) => { const { tn } = A.ctx(), st = kc(tn); const s = st.cats || new Set(tn.cats.map(c => c.id)); if (el.checked) s.add(el.dataset.a); else s.delete(el.dataset.a); st.cats = s; st.page = 0; A.render(); };
   ACT.kcOpt = (el) => { const { tn } = A.ctx(), st = kc(tn), k = el.dataset.a; st[k] = k === 'bg' ? Math.max(5, Math.min(100, Math.round(+el.value) || 18)) : (k === 'dx' || k === 'dy') ? Math.max(-20, Math.min(20, +el.value || 0)) : el.value; st.page = 0; cardsSave(tn, st); A.render(); };
