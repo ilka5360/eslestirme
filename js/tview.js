@@ -182,20 +182,20 @@
   }
   A.pForm = pForm; A.readForm = readForm;
   ACT.addP = guard(() => {
-    const c0 = CAT(), r1 = c0.started && c0.system === 'swiss' && c0.rounds.length === 1;
-    const rd = r1 ? c0.rounds[0] : null, byeP = rd && rd.byes.find(b => b.type === 'bye'), hasRes = rd && rd.pairings.some(x => x.result);
-    const opt = r1 ? `<div style="margin-top:10px"><label>Katılış</label><select id="ap_join"><option value="2">2. turdan itibaren (varsayılan)</option>${byeP ? `<option value="1">1. tura ekle – ${esc(nm(pById(c0, byeP.p)))} (bye) ile eşleştir</option>` : (!hasRes ? '<option value="1">1. tura ekle – 1. tur silinip yeniden eşleştirilir</option>' : '')}</select>
-      <small class="muted">${byeP || !hasRes ? '' : '1. turda bye yok ve sonuçlar girilmiş: yalnızca 2. turdan itibaren eklenebilir. '}Ekleyince başlangıç sıralaması yeniden yapılır.</small></div>` : '';
-    A.dialog(`<h3>Sporcu ekle</h3>${pForm({})}${opt}<div class="row tight" style="margin-top:14px"><button class="b" id="ok">Ekle</button><button class="b sec" data-close>Vazgeç</button></div>`,
+    const c0 = CAT(), st = M.addStage(c0);
+    if (!st) return A.toast('Sporcu ekleme yalnızca 2. tur eşlendirilmeden önce yapılabilir.', 5000);
+    const byeP = st === 'round1' && c0.rounds[0].byes.find(b => b.type === 'bye');
+    const info = st === 'round1' ? `<div class="note info" style="margin-top:10px">1. tur eşlendirmesi <b>bozulmaz</b>; sporcu listenin sonuna eklenir. ${byeP ? `1. turda bye’daki <b>${esc(nm(pById(c0, byeP.p)))}</b> ile yeni masada eşleştirilir.` : '1. turda bye olmadığı için sporcu 1. turu oynamamış (puansız) sayılır.'}</div>`
+      : st === 'round2' ? '<div class="note info" style="margin-top:10px">Sporcu 2. turdan itibaren eklenir; başlangıç sıralaması yeniden yapılır, sonra 2. turu eşlendirirsiniz.</div>' : '';
+    A.dialog(`<h3>Sporcu ekle</h3>${pForm({})}${info}<div class="row tight" style="margin-top:14px"><button class="b" id="ok">Ekle</button><button class="b sec" data-close>Vazgeç</button></div>`,
     d => { A.bindPII(d); $('#ok', d).onclick = async () => {
       const p = readForm(d, M.newPlayer({})); if (!p.soyad && !p.ad) return A.toast('Ad soyad girin');
-      const c = CAT(), sel = $('#ap_join', d);
-      if (sel && sel.value === '1') {
-        if (!byeP && !(await A.ask('1. tur eşlendirmesi silinecek; sporcu eklendikten sonra 1. turu yeniden eşleştirmeniz gerekir. Devam edilsin mi?', { ok: 'Ekle ve turu sil', danger: true }))) return;
-        d.close(); let mode; try { await A.snap('sporcu-1-tur'); mode = M.addToRound1(c, p); } catch (e) { return A.toast(e.message, 6000); }
-        A.save(); rv[c.id] = 1; A.render(); return A.toast(mode === 'bye' ? 'Sporcu 1. tura eklendi' : '1. tur silindi: sporcu eklendi, 1. turu yeniden eşleştirin', 5000);
+      const c = CAT(); d.close();
+      if (st === 'round1') {
+        try { await A.snap('sporcu-1-tur'); M.addToRound1(c, p); } catch (e) { return A.toast(e.message, 6000); }
+        A.save(); rv[c.id] = 1; A.render(); return A.toast('Sporcu listenin sonuna ve 1. tura eklendi', 5000);
       }
-      d.close(); const l = M.addPlayers(c, [p]); A.save(); A.render(); if (l) A.toast('2. turdan itibaren turnuvaya alındı');
+      const l = M.addPlayers(c, [p]); A.save(); A.render(); if (l) A.toast('2. turdan itibaren turnuvaya alındı');
     }; });
   });
   ACT.editP = guard((el) => { const c = CAT(), p = pById(c, el.dataset.a); A.dialog(`<h3>Sporcuyu düzenle</h3>${pForm(p)}${c.started && c.rounds.length > 3 ? '<div class="note">4. turdan sonra başlangıç numarası değiştirilemez; puan değişikliği yalnızca görüntüyü etkiler.</div>' : ''}<div class="row tight" style="margin-top:14px"><button class="b" id="ok">Kaydet</button><button class="b sec" data-close>Vazgeç</button></div>`,
