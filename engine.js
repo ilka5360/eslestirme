@@ -19,11 +19,11 @@
   }
   function startRating(p) { return Math.max(+p.rating || 0, +p.elo || 0); }
 
-  /** Başlangıç sıralaması: kuvvet puanı (UKD/ELO yüksek olan) > unvan > alfabetik (soyad, ad). */
+  /** Başlangıç sıralaması: kuvvet puanı (UKD/ELO yüksek olan) > unvan (yalnız puanlılarda) > alfabetik (soyad, ad; Türkçe A–Z). UKD/ELO’su olmayanlar yalnız soyada göre. */
   function sortStartingList(players) {
     return players.slice().sort((a, b) =>
       startRating(b) - startRating(a) ||
-      titleRank(a.title) - titleRank(b.title) ||
+      (startRating(a) > 0 ? titleRank(a.title) - titleRank(b.title) : 0) ||   // puansızlarda unvan değil, yalnız soyad A–Z
       trCollator.compare(a.soyad || '', b.soyad || '') ||
       trCollator.compare(a.ad || '', b.ad || ''));
   }
