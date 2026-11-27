@@ -82,13 +82,13 @@
     c.settings.rounds = r;
   }
   function setRounds(c, v) {
-    if (c.started) throw new Error('Turnuva başladıktan sonra tur sayısı değiştirilemez.');
+    if (c.rounds.length) throw new Error('Eşlendirme yapıldıktan sonra tur sayısı değiştirilemez.');
     v = +v;
     if (!Number.isInteger(v)) throw new Error('Tur sayısı tam sayı olmalıdır (örn. 5).');
     if (!(v >= 1 && v <= 30)) throw new Error('Tur sayısı 1 ile 30 arasında olmalıdır.');
     c.settings.rounds = v; c.settings.roundsManual = true;
   }
-  function resetRounds(c) { c.settings.roundsManual = false; recalcRounds(c); }
+  function resetRounds(c) { c.settings.roundsManual = false; const st = c.started; c.started = false; try { recalcRounds(c); } finally { c.started = st; } }
   /** Sistem seçimi (başlamadan önce): swiss n>=6, berger n<=8. */
   function setSystem(c, sys) {
     if (c.started) throw new Error('Turnuva başladıktan sonra sistem değiştirilemez.');
