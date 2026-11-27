@@ -144,6 +144,7 @@
       <button class="b sec" data-act="fromT" ${canAdd ? '' : 'disabled'}>Başka kategoriden aktar</button>
       ${can && n ? `<button class="b sec" data-act="spAll">${sel.length === n ? 'Seçimi kaldır' : 'Tümünü seç'}</button><button class="b red" data-act="delSel" ${sel.length ? '' : 'disabled'}>Seçilenleri sil${sel.length ? ' (' + sel.length + ')' : ''}</button>` : ''}
       ${reo && n > 1 ? '<button class="b sec" data-act="spResort" title="UKD/ELO → unvan → soyad A–Z kuralıyla tüm numaraları yeniden verir">↻ Başlangıç sıralamasını yenile</button>' : ''}
+      ${n && !locked ? '<button class="b sec" data-act="fixNames">Ad / soyad düzelt</button>' : ''}
       <button class="b sec" data-act="print">Yazdır</button></div>
       ${!c.started ? `<div class="note info">Başlangıç sıralaması: <b>kuvvet puanı</b> (UKD/ELO’nun yükseği) → <b>unvan</b> → <b>alfabetik</b>. ${n > R.BERGER_MAX ? '' : 'Berger sisteminde numaralar <b>kura ile</b> verilir (başlatılırken). '}${n && n <= R.BERGER_MAX ? '<button class="b sm sec" data-act="drawB">Kura çek</button>' : ''}</div>` : ''}
       ${c.started && c.system === 'swiss' && !canAdd ? '<div class="note">Prosedür md.17(3): 2. tur eşlendirmesi duyurulduktan sonra yeni sporcu alınmaz.</div>' : ''}
@@ -210,6 +211,19 @@
     if (!(await A.ask(`Seçilen ${ids.length} sporcu silinsin mi? (Eşleştirme yapılmadığı için silinebilir; geri alınamaz, yedek alınır.)`, { ok: `${ids.length} sporcuyu sil`, danger: true }))) return;
     let k; try { await A.snap('toplu-silme'); k = M.deletePlayers(c, ids); } catch (e) { return A.toast(e.message); }
     ids.forEach(id => spSel.delete(id)); A.save(); A.render(); A.toast(k + ' sporcu silindi');
+  });
+  ACT.fixNames = guard(() => {
+    const c = CAT(), ids = c.players.filter(p => spSel.has(p.id)).map(p => p.id), ex = c.players.slice(0, 3).map(p => nm(p));
+    A.dialog(`<h3>Ad / soyad düzelt</h3><p class="muted" style="margin-top:0">Başlangıç sıralaması <b>soyada</b> göre yapılır. Liste “SOYAD AD” sırasıyla geldiyse ad ve soyad ters ayrılmış olabilir. Şu an: <b>${esc(ex.join(' · ') || '—')}</b>. ${ids.length ? `Yalnız <b>seçili ${ids.length} sporcuya</b> uygulanır.` : 'Tüm sporculara uygulanır (yalnız bazılarına uygulamak için önce kutularından seçin).'}</p>
+      <div class="row tight" style="flex-direction:column;align-items:stretch;gap:8px">
+        <button class="b" data-m="soyadad">İlk sözcük soyad, kalanı ad (SOYAD AD biçimi)</button>
+        <button class="b sec" data-m="swap">Ad ile soyadı yer değiştir (herkes)</button>
+        <button class="b sec" data-close>Vazgeç</button></div>
+      <small class="muted">Çok sözcüklü soyadlar için sonradan “Düzenle”den elle düzeltebilirsiniz. İşlem yedek alır.</small>`,
+    d => { $$('[data-m]', d).forEach(b => { b.onclick = async () => {
+      const cc = CAT(); d.close(); let k; try { await A.snap('ad-soyad-duzelt'); k = M.fixNames(cc, b.dataset.m, ids); } catch (e) { return A.toast(e.message); }
+      A.save(); A.render(); A.toast(k ? k + ' sporcunun ad/soyadı düzeltildi' + (M.canReorder(cc) ? '; başlangıç sıralaması yenilendi' : '') : 'Değişiklik gerekmedi', 5000);
+    }; }); });
   });
   ACT.spResort = guard(() => { const c = CAT(); try { M.resortStart(c); } catch (e) { return A.toast(e.message); } A.save(); A.render(); A.toast('Başlangıç sıralaması yenilendi (UKD/ELO → unvan → soyad)'); });
   ACT.delP = guard(async (el) => {

@@ -160,6 +160,20 @@
     if (!canReorder(c)) throw new Error('Başlangıç sıralaması yalnızca İsviçre sisteminde ve ilk eşlendirmeden önce yenilenebilir.');
     renumber(c);
   }
+  /** Ad/soyad ayrımını toplu düzeltir. 'soyadad': kayıt "SOYAD AD" sırasıyla yazılmış → ilk sözcük soyad, kalanı ad. 'swap': ad ↔ soyad yer değiştirir. */
+  function fixNames(c, mode, ids) {
+    const set = ids && ids.length ? new Set(ids) : null; let k = 0;
+    c.players.forEach(p => {
+      if (set && !set.has(p.id)) return;
+      const full = [p.ad, p.soyad].filter(Boolean).join(' ').split(/\s+/).filter(Boolean);
+      let ad, soyad;
+      if (mode === 'swap') { ad = p.soyad; soyad = p.ad; }
+      else { if (full.length < 2) return; soyad = full[0]; ad = full.slice(1).join(' '); }
+      if (ad !== p.ad || soyad !== p.soyad) { p.ad = ad; p.soyad = soyad; k++; }
+    });
+    if (k && canReorder(c)) renumber(c);
+    return k;
+  }
   function deletePlayer(c, id) {
     if (!canDelete(c)) throw new Error('Eşleştirme yapıldıktan sonra sporcu silinemez; "Turnuvadan çek" kullanın.');
     const i = c.players.findIndex(p => p.id === id);
@@ -498,7 +512,7 @@
     return d;
   }
 
-  const API = { deletePlayers, canReorder, resortStart, addToRound1, addStage, effDouble, SCHEMA, ID_RE, uid, clone, emptyDB, newSettings, newCategory, newTournament, newPlayer, shortOf, n2, stateOf, suggest, sysOf, totalRounds, completedRounds,
+  const API = { deletePlayers, canReorder, resortStart, fixNames, addToRound1, addStage, effDouble, SCHEMA, ID_RE, uid, clone, emptyDB, newSettings, newCategory, newTournament, newPlayer, shortOf, n2, stateOf, suggest, sysOf, totalRounds, completedRounds,
     recalcRounds, drawBerger, buildBerger, startCategory, unstartCategory, pairRound, noShows, setResult, setRounds, resetRounds, setSystem, renumber, canDelete, canAddPlayer, addPlayers, deletePlayer, withdrawPlayer, noShows, reactivatePlayer,
     categorize, uniqueName, addCategoriesTo, deleteCategory, movePlayer, pullByAge, setStatus, allDone, countPlayers, stripPII, maskTC, migrate, mergeDB, exportBundle, GR_NONE };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.Model = API;
