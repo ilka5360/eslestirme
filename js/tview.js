@@ -180,18 +180,16 @@
     <div class="card noprint"><div class="row tight">
       <button class="b" data-act="addP" ${canAdd ? '' : 'disabled'}>+ Sporcu ekle</button>
       <button class="b" data-act="impP" ${canAdd ? '' : 'disabled'}>📄 Excel / CSV yükle</button>
-      <button class="b sec" data-act="pasteP" ${canAdd ? '' : 'disabled'}>Tablodan yapıştır</button>
       <button class="b sec" data-act="fromT" ${canAdd ? '' : 'disabled'}>Başka kategoriden aktar</button>
-      ${can && n ? '<button class="b red" data-act="delAllP">Tüm listeyi sil</button>' : ''}
-      ${can && n ? `<button class="b sec" data-act="spAll">${sel.length === n ? 'Seçimi kaldır' : 'Tümünü seç'}</button><button class="b red" data-act="delSel" ${sel.length ? '' : 'disabled'}>Seçilenleri sil${sel.length ? ' (' + sel.length + ')' : ''}</button>` : ''}
+      ${can && n ? `<span class="tb-sep" aria-hidden="true"></span><button class="b sec" data-act="spAll">${sel.length === n ? 'Seçimi kaldır' : 'Tümünü seç'}</button><button class="b red" data-act="delSel" ${sel.length ? '' : 'disabled'}>Seçilenleri sil${sel.length ? ' (' + sel.length + ')' : ''}</button>${sel.length ? `<span class="selcount">${sel.length} / ${n} seçili</span>` : ''}` : ''}
       ${reo && n > 1 ? '<button class="b sec" data-act="spResort" title="UKD/ELO → unvan → soyad A–Z kuralıyla tüm numaraları yeniden verir">↻ Başlangıç sıralamasını yenile</button>' : ''}
       <button class="b sec" data-act="spCols" title="Tabloda gösterilecek bilgileri seçin">☰ Sütunlar</button>
       <button class="b sec" data-act="print">Yazdır</button></div>
       ${!c.started ? `<div class="note info">Başlangıç sıralaması: <b>kuvvet puanı</b> (UKD/ELO’nun yükseği) → <b>unvan</b> → <b>alfabetik</b>. ${n > R.BERGER_MAX ? '' : 'Berger sisteminde numaralar <b>kura ile</b> verilir (başlatılırken). '}${n && n <= R.BERGER_MAX ? '<button class="b sm sec" data-act="drawB">Kura çek</button>' : ''}</div>` : ''}
       ${c.started && c.system === 'swiss' && !canAdd ? '<div class="note">Prosedür md.17(3): 2. tur eşlendirmesi duyurulduktan sonra yeni sporcu alınmaz.</div>' : ''}
       ${locked ? '<div class="note">Berger turnuvası başladı; sporcu listesi kilitli (çekilme yapılabilir).</div>' : ''}</div>
-    <div class="card"><div class="tblw fit"><table class="sp"><tr>${can ? '<th class="noprint"></th>' : ''}${cols.map(k => SPC[k].th).join('')}<th class="noprint"></th></tr>
-    ${players.map(p => { const wd = p.status === 'withdrawn'; const ctx = { p, wd, other }; return `<tr class="${wd ? 'out' : ''}">${can ? `<td class="noprint c-chk"><input type="checkbox" data-act="spChk" data-a="${p.id}" ${spSel.has(p.id) ? 'checked' : ''} aria-label="Seç"></td>` : ''}${cols.map(k => SPC[k].td(ctx)).join('')}
+    <div class="card"><div class="tblw fit"><table class="sp"><tr>${can ? `<th class="noprint c-chk"><input type="checkbox" data-act="spAllChk" ${n && sel.length === n ? 'checked' : ''} aria-label="Tümünü seç / kaldır"></th>` : ''}${cols.map(k => SPC[k].th).join('')}<th class="noprint"></th></tr>
+    ${players.map(p => { const wd = p.status === 'withdrawn'; const ctx = { p, wd, other }; return `<tr class="${wd ? 'out' : ''}${spSel.has(p.id) ? ' sel' : ''}">${can ? `<td class="noprint c-chk"><input type="checkbox" data-act="spChk" data-a="${p.id}" ${spSel.has(p.id) ? 'checked' : ''} aria-label="Seç"></td>` : ''}${cols.map(k => SPC[k].td(ctx)).join('')}
       <td class="noprint act-cell">${A.ib('editP', p.id, 'edit', 'Düzenle', 'sec', locked ? 'disabled' : '')}
         ${others.length && can ? A.ib('moveP', p.id, 'move', 'Kategori değiştir') : ''}
         ${wd ? A.ib('reactP', p.id, 'undo', 'Çekilmeyi geri al') : (c.started && !can && c.system === 'swiss' ? A.ib('wdP', p.id, 'wd', 'Turnuvadan çekil', 'red') : '')}
@@ -243,6 +241,7 @@
   ACT.editP = guard((el) => { const c = CAT(), p = pById(c, el.dataset.a); A.dialog(`<h3>Sporcuyu düzenle</h3>${pForm(p)}${c.started && c.rounds.length > 3 ? '<div class="note">4. turdan sonra başlangıç numarası değiştirilemez; puan değişikliği yalnızca görüntüyü etkiler.</div>' : ''}<div class="row tight" style="margin-top:14px"><button class="b" id="ok">Kaydet</button><button class="b sec" data-close>Vazgeç</button></div>`,
     d => { A.bindPII(d); $('#ok', d).onclick = () => { readForm(d, p); if (!p.ad && !p.soyad) return A.toast('Ad soyad boş olamaz'); refreshNumbers(c); A.save(); d.close(); A.render(); }; }); });
   function refreshNumbers(c) { if (c.started) { if (c.system === 'swiss' && c.rounds.length <= 3) M.renumber(c); } else if (!(c.bergerDrawn && c.players.length <= R.BERGER_MAX)) M.renumber(c); }
+  ACT.spAllChk = (el) => { const ids = CAT().players.map(p => p.id); if (el.checked) ids.forEach(id => spSel.add(id)); else ids.forEach(id => spSel.delete(id)); A.render(); };
   ACT.spChk = (el) => { if (el.checked) spSel.add(el.dataset.a); else spSel.delete(el.dataset.a); A.render(); };
   ACT.spAll = () => { const c = CAT(), ids = c.players.map(p => p.id); if (ids.length && ids.every(id => spSel.has(id))) ids.forEach(id => spSel.delete(id)); else ids.forEach(id => spSel.add(id)); A.render(); };
   ACT.delSel = guard(async () => {
@@ -250,12 +249,6 @@
     if (!(await A.ask(`Seçilen ${ids.length} sporcu silinsin mi? (Eşleştirme yapılmadığı için silinebilir; geri alınamaz, yedek alınır.)`, { ok: `${ids.length} sporcuyu sil`, danger: true }))) return;
     let k; try { await A.snap('toplu-silme'); k = M.deletePlayers(c, ids); } catch (e) { return A.toast(e.message); }
     ids.forEach(id => spSel.delete(id)); A.save(); A.render(); A.toast(k + ' sporcu silindi');
-  });
-  ACT.delAllP = guard(async () => {
-    const c = CAT(), ids = c.players.map(p => p.id); if (!ids.length) return;
-    if (!(await A.ask(`“${c.name}” kategorisindeki ${ids.length} sporcunun tamamı silinsin mi? Yanlış Excel yüklediyseniz bunu yapıp doğru dosyayı yükleyebilirsiniz. (Eşleştirme yapılmadığı için silinebilir; geri alınamaz, yedek alınır.)`, { ok: `${ids.length} sporcuyu sil`, danger: true }))) return;
-    let k; try { await A.snap('tum-liste-silme'); k = M.deletePlayers(c, ids); } catch (e) { return A.toast(e.message); }
-    spSel.clear(); A.save(); A.render(); A.toast(k + ' sporcu silindi. Şimdi yeni dosyayı yükleyebilirsiniz.');
   });
   ACT.fixNames = guard(() => {
     const c = CAT(), ids = c.players.filter(p => spSel.has(p.id)).map(p => p.id), ex = c.players.slice(0, 3).map(p => nm(p));
@@ -361,8 +354,6 @@
   ACT.impP = guard(() => A.pickFile('.xlsx,.xls,.csv,.txt', async (f) => {
     try { const wb = I.readWorkbook(XLSX, await f.arrayBuffer(), f.size); const res = await parseAsk(I.sheetRows(XLSX, wb.Sheets[wb.SheetNames[0]])); if (res) importDialog(res, f.name); } catch (e) { A.toast(e.message, 6000); }
   }));
-  ACT.pasteP = guard(() => A.dialog(`<h3>Tablodan yapıştır</h3><p class="muted">Excel’den başlık satırıyla birlikte kopyalayıp yapıştırın. Başlıklar standart şablondaki gibi olmalıdır (<code>isim, Unvan, ID no, ulusal rating, ulsulararasi rating, DogTar, Fed, Cinsiyet, Gr, Kulüp, FIDE-No</code>); “Şablonu indir” ile alabilirsiniz.</p><textarea id="pt" maxlength="500000"></textarea><div class="row tight" style="margin-top:10px"><button class="b" id="ok">Devam</button><button class="b sec" data-close>Vazgeç</button></div>`,
-    d => { $('#ok', d).onclick = () => { const t = $('#pt', d).value.trim(); if (!t) return; try { const wb = XLSX.read(t, { type: 'string', cellDates: false }); d.close(); parseAsk(I.sheetRows(XLSX, wb.Sheets[wb.SheetNames[0]])).then(res => { if (res) importDialog(res, 'yapıştırılan tablo'); }); } catch (e) { A.toast('Tablo okunamadı'); } }; }));
   ACT.fromT = guard(() => {
     const { tn, cat } = CT(); const src = [];
     Object.values(A.db().tournaments).forEach(t => t.cats.forEach(c => { if (c !== cat && c.players.length) src.push({ t, c }); }));
