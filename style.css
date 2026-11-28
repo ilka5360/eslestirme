@@ -516,3 +516,6 @@ input[type=date],input[type=datetime-local],input[type=time]{
 }
 input[type=date]::-webkit-date-and-time-value{text-align:left;min-height:1.2em}
 .row.frm input[type=date]{height:40px}
+@media (max-width:760px){
+  .row.frm.dates>div{flex:1 1 100%}
+}

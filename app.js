@@ -381,7 +381,7 @@
       <p class="muted" style="margin-top:0">Yarışma yönergesi PDF’sini seçin: turnuva adı, tarih, yer, zaman kontrolü, kategoriler, tur sayısı ve tur saatleri otomatik doldurulur. Sporcuları sonra eklersiniz. Doldurulanları aşağıda kontrol edip düzeltebilirsiniz.</p>
       <button class="b sec" data-act="wiYon">📄 Yönerge PDF’si seç</button>
       ${yr ? `<div class="note ${yr.warnings.length ? '' : 'info'}" style="margin-top:10px"><b>${esc(W.yonFile || 'Yönerge')}</b> okundu: ${esc(yr.found.join(', ') || 'bilgi bulunamadı')}.${yr.cats.length ? `<br>Kategoriler: ${esc(yr.cats.map(c => c.name + (c.minYear ? ' (' + (c.minYear === c.maxYear ? c.minYear : c.minYear + '–' + c.maxYear) + ')' : '')).join(' · '))}` : ''}${yr.extra.quota ? `<br>Kontenjan: ${yr.extra.quota} sporcu` : ''}${yr.warnings.length ? `<br>⚠ ${esc(yr.warnings.join(' '))}` : ''}</div>` : ''}</div>`;
-    return yonCard + `<div class="card"><div class="row frm">${f('name', 'Turnuva adı *', 'Örn. 3. Mübin Boysan Anma Turnuvası')}${f('date', 'Başlama tarihi', '', 'date')}${f('dateEnd', 'Bitiş tarihi', '', 'date')}</div>
+    return yonCard + `<div class="card"><div class="row frm dates">${f('name', 'Turnuva adı *', 'Örn. 3. Mübin Boysan Anma Turnuvası')}${f('date', 'Başlama tarihi', '', 'date')}${f('dateEnd', 'Bitiş tarihi', '', 'date')}</div>
       <div class="row frm" style="margin-top:10px">${f('place', 'Yer', 'Rize')}${f('arbiter', 'Başhakem')}${f('tempo', 'Zaman kontrolü', '35+30')}
       <div><label>Yaş hesabı yılı</label><input type="number" data-act="wi" data-a="refYear" min="1990" max="2100" value="${W.info.refYear}"><small class="muted">Yaş = bu yıl − doğum yılı</small></div></div><div class="note info">Başlama / bitiş tarihi ve zaman kontrolü, kategorilerin <b>Kategori ve tur başlat</b> sayfasına otomatik taşınır (1. tur 10:00, turlar arası 150 dk).</div></div>${wnav(0, 2, 'İleri →')}`;
   }
@@ -588,7 +588,7 @@
   function vTnSettings(tn) {
     const inf = (k, label, ph, type) => `<div><label>${label}</label><input data-act="info" data-a="${k}" type="${type || 'text'}" value="${esc(tn.info[k] == null ? '' : tn.info[k])}" ${ph ? `placeholder="${esc(ph)}"` : ''} maxlength="150"></div>`;
     return `<h2>Turnuva bilgileri</h2><div class="card">
-      <div class="row frm">${inf('name', 'Turnuva adı')}${inf('date', 'Başlama tarihi', '', 'date')}${inf('dateEnd', 'Bitiş tarihi', '', 'date')}</div>
+      <div class="row frm dates">${inf('name', 'Turnuva adı')}${inf('date', 'Başlama tarihi', '', 'date')}${inf('dateEnd', 'Bitiş tarihi', '', 'date')}</div>
       <div class="row frm" style="margin-top:10px">${inf('place', 'Yer')}${inf('organizer', 'Organizatör(ler)')}${inf('tempo', 'Zaman kontrolü', '35+30')}${inf('federation', 'Federasyon', 'TUR')}</div>
       <div class="row" style="margin-top:10px">${inf('director', 'Turnuva direktörü')}${inf('arbiter', 'Başhakem')}${inf('deputy', 'Başhakem yardımcısı')}${inf('referees', 'Hakemler')}</div>
       <div class="row" style="margin-top:10px">${inf('quota', 'Kontenjan (sporcu)', '', 'number')}${inf('deadline', 'Son başvuru', '2026-10-30 21:00')}${inf('forfeitMin', 'Hükmen yenik süresi (dk)', '15', 'number')}${inf('awards', 'Ödüller')}</div>
