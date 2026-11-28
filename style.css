@@ -507,3 +507,12 @@ td.c-chk,th.c-chk{width:42px;text-align:center}
   .cattabs .ctab{flex:none}
 }
 @media print{.maintabs{display:none}}
+
+/* v-fix: iOS tarih alanları kartın dışına taşıyordu */
+.row>*{min-width:0}
+input[type=date],input[type=datetime-local],input[type=time]{
+  -webkit-appearance:none;appearance:none;display:block;
+  min-width:0;max-width:100%;width:100%;text-align:left;
+}
+input[type=date]::-webkit-date-and-time-value{text-align:left;min-height:1.2em}
+.row.frm input[type=date]{height:40px}
