@@ -179,7 +179,10 @@
     return `<h2>Sporcular <span class="pill">${n}</span></h2>${quota && tot > quota ? `<div class="note err noprint">Yönergedeki kontenjan ${quota} sporcu; şu an turnuvada ${tot} sporcu var.</div>` : ''}
     <div class="card noprint"><div class="row tight">
       <button class="b" data-act="addP" ${canAdd ? '' : 'disabled'}>+ Sporcu ekle</button>
+      <button class="b" data-act="impP" ${canAdd ? '' : 'disabled'}>📄 Excel / CSV yükle</button>
+      <button class="b sec" data-act="pasteP" ${canAdd ? '' : 'disabled'}>Tablodan yapıştır</button>
       <button class="b sec" data-act="fromT" ${canAdd ? '' : 'disabled'}>Başka kategoriden aktar</button>
+      ${can && n ? '<button class="b red" data-act="delAllP">Tüm listeyi sil</button>' : ''}
       ${can && n ? `<button class="b sec" data-act="spAll">${sel.length === n ? 'Seçimi kaldır' : 'Tümünü seç'}</button><button class="b red" data-act="delSel" ${sel.length ? '' : 'disabled'}>Seçilenleri sil${sel.length ? ' (' + sel.length + ')' : ''}</button>` : ''}
       ${reo && n > 1 ? '<button class="b sec" data-act="spResort" title="UKD/ELO → unvan → soyad A–Z kuralıyla tüm numaraları yeniden verir">↻ Başlangıç sıralamasını yenile</button>' : ''}
       <button class="b sec" data-act="spCols" title="Tabloda gösterilecek bilgileri seçin">☰ Sütunlar</button>
@@ -247,6 +250,12 @@
     if (!(await A.ask(`Seçilen ${ids.length} sporcu silinsin mi? (Eşleştirme yapılmadığı için silinebilir; geri alınamaz, yedek alınır.)`, { ok: `${ids.length} sporcuyu sil`, danger: true }))) return;
     let k; try { await A.snap('toplu-silme'); k = M.deletePlayers(c, ids); } catch (e) { return A.toast(e.message); }
     ids.forEach(id => spSel.delete(id)); A.save(); A.render(); A.toast(k + ' sporcu silindi');
+  });
+  ACT.delAllP = guard(async () => {
+    const c = CAT(), ids = c.players.map(p => p.id); if (!ids.length) return;
+    if (!(await A.ask(`“${c.name}” kategorisindeki ${ids.length} sporcunun tamamı silinsin mi? Yanlış Excel yüklediyseniz bunu yapıp doğru dosyayı yükleyebilirsiniz. (Eşleştirme yapılmadığı için silinebilir; geri alınamaz, yedek alınır.)`, { ok: `${ids.length} sporcuyu sil`, danger: true }))) return;
+    let k; try { await A.snap('tum-liste-silme'); k = M.deletePlayers(c, ids); } catch (e) { return A.toast(e.message); }
+    spSel.clear(); A.save(); A.render(); A.toast(k + ' sporcu silindi. Şimdi yeni dosyayı yükleyebilirsiniz.');
   });
   ACT.fixNames = guard(() => {
     const c = CAT(), ids = c.players.filter(p => spSel.has(p.id)).map(p => p.id), ex = c.players.slice(0, 3).map(p => nm(p));

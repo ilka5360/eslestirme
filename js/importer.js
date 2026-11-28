@@ -196,11 +196,26 @@
     return k;
   }
   const NAME_MODES = [['auto', 'Otomatik (dosyadaki Ad / Soyad sütunları)'], ['sa', '“isim” sütunu SOYAD AD biçiminde'], ['as', '“isim” sütunu AD SOYAD biçiminde'], ['swap', 'Ad ile soyadı yer değiştir']];
+  /** .xlsx (zip: PK) ve eski .xls (OLE: D0 CF 11 E0) ikili; geri kalanı (CSV/TXT) metindir. */
+  function isBinaryBook(u) { return (u[0] === 0x50 && u[1] === 0x4B) || (u[0] === 0xD0 && u[1] === 0xCF && u[2] === 0x11 && u[3] === 0xE0); }
+  /** CSV baytlarını Türkçe karakterleri koruyarak çöz: UTF-8 (BOM'lu/BOM'suz), UTF-16 (BOM'lu), değilse Windows-1254. */
+  function decodeText(u) {
+    if (u[0] === 0xFF && u[1] === 0xFE) return new TextDecoder('utf-16le').decode(u.subarray(2));
+    if (u[0] === 0xFE && u[1] === 0xFF) return new TextDecoder('utf-16be').decode(u.subarray(2));
+    let t;
+    try { t = new TextDecoder('utf-8', { fatal: true }).decode(u); }
+    catch (e) { t = new TextDecoder('windows-1254').decode(u); }
+    return t.charCodeAt(0) === 0xFEFF ? t.slice(1) : t;
+  }
   function readWorkbook(X, buf, size) {
     checkSize(size == null ? (buf.byteLength || buf.length) : size);
     let wb;
-    try { wb = X.read(buf, { type: 'array', cellDates: false, cellFormula: false, cellHTML: false, cellStyles: false }); }
-    catch (e) { throw new Error('Dosya okunamadı: geçerli bir Excel (.xlsx/.xls) veya CSV değil.'); }
+    const opt = { cellDates: false, cellFormula: false, cellHTML: false, cellStyles: false };
+    try {
+      const u8 = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+      const text = isBinaryBook(u8) ? null : decodeText(u8);
+      wb = text != null ? X.read(text, Object.assign({ type: 'string' }, opt)) : X.read(u8, Object.assign({ type: 'array' }, opt));
+    } catch (e) { throw new Error('Dosya okunamadı: geçerli bir Excel (.xlsx/.xls) veya CSV değil.'); }
     if (!wb.SheetNames.length) throw new Error('Dosyada sayfa bulunamadı.');
     return wb;
   }
