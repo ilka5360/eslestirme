@@ -4,7 +4,7 @@
   const A = window.App, { $, $$, esc, ACT, fmt, fmtDate } = A;
   const M = window.Model, S = window.Store, R = window.Rules, I = window.Importer, E = window.Engine;
   A.M = M; A.S = S; A.E = E;
-  A.VERSION = { no: 60, date: '28.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
+  A.VERSION = { no: 61, date: '28.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
 
   /* ------------------------------------------------------------- veri */
   const boot = S.load();
@@ -22,7 +22,7 @@
     S.fsSchedule(() => DB, (e) => A.toast('Dosyaya yazılamadı: ' + e.message));
     return ok;
   };
-  A.snap = (reason) => S.snapshot(DB, reason);
+  A.snap = (reason) => { let n = ''; try { const c = A.ctx && A.ctx(); n = c && c.tn && c.tn.info && c.tn.info.name ? ' – ' + c.tn.info.name : ''; } catch (e) { /* turnuva dışı sayfa */ } return S.snapshot(DB, reason + n); };
   if (boot.migrated) { A.save({ clean: true }); }
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
 
@@ -117,6 +117,8 @@
 
   /* ------------------------------------------------------------- yardımcılar */
   const today = () => new Date().toISOString().slice(0, 10);
+  /** Yedek dosya adı: <turnuva adı>_yedek_<yıl-ay-gün>_<saat-dakika> (yerel saat; dosya adında ':' olmaz). */
+  const backupName = (nm) => { const d = new Date(), z = (n) => String(n).padStart(2, '0'); return `${nm}_yedek_${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}-${z(d.getMinutes())}.json`; };
   const yearOf = (d) => +String(d || '').slice(0, 4) || new Date().getFullYear();
   const sorted = () => Object.values(DB.tournaments).sort((a, b) => (b.info.date || '').localeCompare(a.info.date || '') || b.created - a.created);
   const catLine = (c) => { const tr = M.totalRounds(c); return `<span class="chip" title="${esc(c.name)}"><b>${esc(c.short || c.name)}</b> ${c.players.length}${tr ? ' · ' + tr + ' tur' : ''}${c.started ? ' · ' + M.completedRounds(c) + '/' + tr : ''}</span>`; };
@@ -229,10 +231,11 @@
             b.assets = {};
             for (const id of Object.keys(b.tournaments)) { b.assets[id] = {}; for (const slot of ['header', 'yHeader', 'footer', 'logoL', 'logoR', 'cardBg']) { const bl = await S.getBlob(id, slot); if (bl) b.assets[id][slot] = await S.toDataURL(bl); } }
           }
-          const nm = tid ? A.safeName(DB.tournaments[tid].info.name) : 'tum-turnuvalar';
-          A.download(new Blob([JSON.stringify(b, null, 1)], { type: 'application/json' }), `eslestirme-yedek-${nm}-${today()}.json`);
+          const nm = tid ? A.safeName(DB.tournaments[tid].info.name) : 'Tum-turnuvalar';
+          const fname = backupName(nm);
+          A.download(new Blob([JSON.stringify(b, null, 1)], { type: 'application/json' }), fname);
           if (!tid) { DB.lastBackup = Date.now(); DB.dirty = false; A.save({ clean: true }); }
-          const fname = `eslestirme-yedek-${nm}-${today()}.json`, pii = o.includePII;
+          const pii = o.includePII;
           d.close(); A.render();
           A.dialog(`<h3>Yedek hazır</h3><p style="margin-top:0"><b>${esc(fname)}</b></p>
             <p><b>Nerede:</b> ${esc(A.saveWhere())}</p>
