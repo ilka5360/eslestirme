@@ -4,7 +4,7 @@
   const A = window.App, { $, $$, esc, ACT, fmt, fmtDate } = A;
   const M = window.Model, S = window.Store, R = window.Rules, I = window.Importer, E = window.Engine;
   A.M = M; A.S = S; A.E = E;
-  A.VERSION = { no: 63, date: '28.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
+  A.VERSION = { no: 66, date: '28.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
 
   /* ------------------------------------------------------------- veri */
   const boot = S.load();
@@ -84,14 +84,32 @@
   };
   ACT.chkUpd = () => A.checkUpdate(true);
   ACT.hideUpd = () => { upd = null; chrome(); };
+  /* Güncelleme: GitHub Pages dosyaları birkaç dakika eski (CDN) sunabilir; sürüm bilgisi her seferinde taze okunur, bu yüzden "yeni sürüm var" görünüp
+     yüklenmeyebilir. Çözüm: dosyaları her seferinde benzersiz adresle (önbelleği aşarak) indirip hizmet çalışanı önbelleğine kendimiz yazarız. */
   ACT.doUpdate = async () => {
     if (A.native) { location.href = APK_URL; return; }   // Android: APK indirme bağlantısı sistem tarayıcısında açılır
-    A.toast('Güncelleniyor…', 6000);
+    A.toast('Güncelleniyor…', 15000);
     try {
-      const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
-      if (reg) { navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), { once: true }); setTimeout(() => location.reload(), 15000); await reg.update(); }
-      else location.reload();
-    } catch (e) { location.reload(); }
+      const root = new URL('./', location.href).href, stamp = Date.now();
+      const getFresh = async (f) => { const r = await fetch(root + f + (f.includes('?') ? '&' : '?') + 'u=' + stamp, { cache: 'no-store' }); if (!r.ok) throw new Error(f + ' (' + r.status + ')'); return r; };
+      const swTxt = await (await getFresh('sw.js')).text();
+      const vName = (/const V = '([^']+)'/.exec(swTxt) || [])[1], list = /const FILES = \[([\s\S]*?)\];/.exec(swTxt);
+      if (!vName || !list || !window.caches) throw new Error('önbellek kullanılamıyor');
+      const files = [...list[1].matchAll(/'([^']+)'/g)].map(m => m[1]).filter(f => f !== './');
+      const fresh = [];
+      for (const f of files) { const r = await getFresh(f); fresh.push([f, await r.blob(), r.headers.get('content-type')]); }
+      const cache = await caches.open(vName);
+      for (const [f, b, ct] of fresh) {
+        const mk = () => new Response(b, { status: 200, headers: ct ? { 'content-type': ct } : {} });
+        await cache.put(new Request(root + f), mk());
+        if (f === 'index.html') { await cache.put(new Request(root), mk()); await cache.put(new Request(root + 'index.html'), mk()); }
+      }
+      for (const k of await caches.keys()) if (k !== vName) await caches.delete(k);
+      try { const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (reg) reg.update(); } catch (e) { /* yok */ }
+      location.reload();
+    } catch (e) {
+      A.toast('Güncelleme indirilemedi (' + (e && e.message || e) + '). Birkaç dakika sonra tekrar deneyin.', 7000);
+    }
   };
   setTimeout(() => A.checkUpdate(false), 4000);
 
