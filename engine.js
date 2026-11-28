@@ -24,8 +24,8 @@
     return players.slice().sort((a, b) =>
       startRating(b) - startRating(a) ||
       (startRating(a) > 0 ? titleRank(a.title) - titleRank(b.title) : 0) ||   // puansızlarda unvan değil, yalnız soyad A–Z
-      trCollator.compare(a.soyad || '', b.soyad || '') ||
-      trCollator.compare(a.ad || '', b.ad || ''));
+      trCollator.compare(a.surname || '', b.surname || '') ||
+      trCollator.compare(a.firstname || '', b.firstname || ''));
   }
 
   /* ------------------------------------------------------------------ *

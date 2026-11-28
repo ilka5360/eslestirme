@@ -4,7 +4,7 @@
   const A = window.App, { $, $$, esc, ACT, fmt, fmtDate } = A;
   const M = window.Model, S = window.Store, R = window.Rules, I = window.Importer, E = window.Engine;
   A.M = M; A.S = S; A.E = E;
-  A.VERSION = { no: 66, date: '28.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
+  A.VERSION = { no: 67, date: '28.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
 
   /* ------------------------------------------------------------- veri */
   const boot = S.load();
@@ -448,13 +448,13 @@
       <label class="drop" data-drop="wiFile"><input type="file" data-act="wiFile" accept=".xlsx,.xls,.csv" hidden><b>Excel dosyasını buraya bırakın</b><span>veya dokunup seçin (.xlsx, .xls, .csv · en çok 5 MB)</span></label>`;
     if (s) {
       h += `<div class="note ${s.res.errors.length && !s.res.players.length ? 'err' : 'ok'}"><b>${esc(s.name)}</b> <span class="pill ${s.res.info.mode === 'sablon' ? '' : 'warn'}">${s.res.info.mode === 'sablon' ? 'şablon biçimi' : 'tahmini eşleme'}</span>${s.sheets.length > 1 ? ` · sayfa: <select data-act="wiSheet" style="width:auto;display:inline-block">${s.sheets.map(n => `<option ${n === s.sheet ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>` : ''}<br>${s.res.info.rows} satır okundu · ${s.res.players.length} sporcu alındı · ${s.res.errors.length} hata · ${s.res.warnings.length} uyarı
-        <button class="b sm sec" data-act="wiClear" style="margin-left:8px">Dosyayı kaldır</button></div>${s.res.players.length ? `<div class="note"><label>Ad / soyad okuma</label><select data-act="wiNm">${I.NAME_MODES.map(m => `<option value="${m[0]}" ${W.nm === m[0] ? 'selected' : ''}>${m[1]}</option>`).join('')}</select><div class="muted">Örnek (ad · soyad): ${esc(W.raw.slice(0, 3).map(p => p.ad + ' ' + p.soyad).join(' · '))}</div></div>` : ''}${issues(s.res.errors, 'err')}${issues(s.res.warnings, 'warn')}`;
+        <button class="b sm sec" data-act="wiClear" style="margin-left:8px">Dosyayı kaldır</button></div>${issues(s.res.errors, 'err')}${issues(s.res.warnings, 'warn')}`;
     }
     h += `</div><div class="card"><h3>2) Elle sporcu ekle</h3>
       <div style="margin-bottom:8px"><label>Kategori (Gr)</label><input id="m_gr" list="grs" value="${esc(W.lastCat)}" placeholder="Örn. A KATEGORİSİ" maxlength="40"><datalist id="grs">${[...new Set(wizPlayers().map(p => p.src.gr).filter(Boolean))].map(g => `<option value="${esc(g)}">`).join('')}</datalist></div>
       ${A.pForm({}, 'm_')}
       <div style="margin-top:10px"><button class="b" data-act="wiAdd">+ Sporcuyu ekle</button></div>
-      ${W.manual.length ? `<div class="tblw" style="margin-top:10px;max-height:260px"><table><tr><th>Soyad Ad</th><th>Kategori</th><th class="n">UKD</th><th>Doğum</th><th></th></tr>${W.manual.map(p => `<tr><td>${esc(p.soyad)} ${esc(p.ad)}</td><td>${esc(p.src.gr)}</td><td class="n">${p.rating || ''}</td><td>${esc(fmtDate(p.birthDate))}</td><td><button class="b sm red" data-act="wiRm" data-a="${p.id}" aria-label="Kaldır">✕</button></td></tr>`).join('')}</table></div>` : ''}</div>
+      ${W.manual.length ? `<div class="tblw" style="margin-top:10px;max-height:260px"><table><tr><th>Soyad Ad</th><th>Kategori</th><th class="n">UKD</th><th>Doğum</th><th></th></tr>${W.manual.map(p => `<tr><td>${esc(p.surname)} ${esc(p.firstname)}</td><td>${esc(p.src.gr)}</td><td class="n">${p.rating || ''}</td><td>${esc(fmtDate(p.birthDate))}</td><td><button class="b sm red" data-act="wiRm" data-a="${p.id}" aria-label="Kaldır">✕</button></td></tr>`).join('')}</table></div>` : ''}</div>
       <p class="muted">Excel yüklemeden, sporcu eklemeden de devam edebilirsiniz (boş kategorilerle başlanır).</p>`;
     return h + wnav(1, 3, 'İleri →');
   }
@@ -476,13 +476,12 @@
     if (res.errors.length && !res.players.length) A.toast(res.errors[0], 6000);
   }
   ACT.wiFile = async (el) => { const f = el.files && el.files[0]; if (!f) return; try { await readWizFile(f); } catch (e) { A.toast(e.message, 6000); } A.render(); };
-  ACT.wiNm = (el) => { W.nm = el.value; I.applyNameMode(W.raw, W.nm); A.render(); };
   ACT.wiSheet = async (el) => { try { await readWizFile(W.file, el.value); } catch (e) { A.toast(e.message); } A.render(); };
   ACT.wiClear = () => { W.src = null; W.wb = null; W.raw = []; W.stay = new Set(); A.render(); };
   ACT.wiRm = (el) => { W.manual = W.manual.filter(p => p.id !== el.dataset.a); A.render(); };
   ACT.wiAdd = () => {
     const root = $('#app'), id = M.uid(), p = A.readForm(root, { id, kisiId: id }, 'm_');
-    if (!p.ad && !p.soyad) return A.toast('Ad veya soyad girin.');
+    if (!p.firstname || !p.surname) return A.toast(A.NAME_REQ);
     W.lastCat = $('#m_gr').value.trim();
     W.manual.push(Object.assign(M.newPlayer(Object.assign(p, { id })), { src: { gr: W.lastCat || 'KATEGORİ 1', row: 0 } }));
     A.render(); const i = $('#m_ad'); if (i) i.focus();
@@ -521,8 +520,8 @@
     const age = cats.filter(c => c.kind === 'age' && c.players.length); if (!age.length) return '';
     const stayList = W.stay.size;
     return `<details style="margin-top:10px"><summary>Taşınan sporcular (${age.reduce((s, c) => s + c.players.length, 0)})${stayList ? ` · ${stayList} sporcu Gr’de bırakıldı` : ''}</summary>
-      ${age.map(c => `<h4 style="margin:8px 0 4px">${esc(c.name)}</h4><div class="tblw" style="max-height:220px"><table><tr><th>Taşı</th><th>Soyad Ad</th><th>Gr</th><th class="n">Doğum</th></tr>${c.players.map(p => `<tr><td><input type="checkbox" data-act="wiMove" data-a="${p.id}" checked></td><td>${esc(p.soyad)} ${esc(p.ad)}</td><td>${esc(p.src.gr)}</td><td class="n">${p.birthYear}</td></tr>`).join('')}</table></div>`).join('')}
-      ${stayList ? `<div class="muted" style="margin-top:6px">Gr’de bırakılan sporcular: ${[...W.stay].map(id => { const p = wizPlayers().find(x => x.id === id); return p ? `<button class="chip" data-act="wiMove" data-a="${p.id}" data-undo="1">${esc(p.soyad)} ${esc(p.ad)} ↶</button>` : ''; }).join(' ')}</div>` : ''}</details>`;
+      ${age.map(c => `<h4 style="margin:8px 0 4px">${esc(c.name)}</h4><div class="tblw" style="max-height:220px"><table><tr><th>Taşı</th><th>Soyad Ad</th><th>Gr</th><th class="n">Doğum</th></tr>${c.players.map(p => `<tr><td><input type="checkbox" data-act="wiMove" data-a="${p.id}" checked></td><td>${esc(p.surname)} ${esc(p.firstname)}</td><td>${esc(p.src.gr)}</td><td class="n">${p.birthYear}</td></tr>`).join('')}</table></div>`).join('')}
+      ${stayList ? `<div class="muted" style="margin-top:6px">Gr’de bırakılan sporcular: ${[...W.stay].map(id => { const p = wizPlayers().find(x => x.id === id); return p ? `<button class="chip" data-act="wiMove" data-a="${p.id}" data-undo="1">${esc(p.surname)} ${esc(p.firstname)} ↶</button>` : ''; }).join(' ')}</div>` : ''}</details>`;
   }
   ACT.wiOn = (el) => { const k = el.dataset.a; if (el.checked) W.off.delete(k); else W.off.add(k); A.render(); };
   ACT.wiName = (el) => { W.names[el.dataset.a] = el.value.trim().slice(0, 40); };

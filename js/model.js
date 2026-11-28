@@ -50,11 +50,11 @@
   function newPlayer(o) {
     o = o || {};
     const id = o.id || uid();
-    return { id, kisiId: o.kisiId || id, no: 0, ad: String(o.ad || '').trim(), soyad: String(o.soyad || '').trim(), title: o.title || '',
+    return { id, kisiId: o.kisiId || id, no: 0, firstname: String(o.firstname != null ? o.firstname : (o.ad || '')).trim(), surname: String(o.surname != null ? o.surname : (o.soyad || '')).trim(),   // ad/soyad: eski kayıtlardan göç title: o.title || '',
       rating: +o.rating || 0, elo: +o.elo || 0, birthDate: o.birthDate || '', birthYear: +o.birthYear || '',
       female: o.female == null ? null : !!o.female, club: clubOf(o), fed: o.fed || '', fideNo: o.fideNo || '',
       kulupNo: o.kulupNo == null ? '' : String(o.kulupNo), tip: o.tip || '', kaynak: o.kaynak || '', atitle: o.atitle || '',
-      tc: o.tc || '', tel: o.tel || '', src: o.src || { gr: '', row: 0 },
+      tc: o.tc || '', tel: o.tel || '', email: o.email || '', src: o.src || { gr: '', row: 0 },
       status: 'active', joinRound: 1, wdFrom: null, wdNote: '', ratingLog: [] };
   }
 
@@ -131,10 +131,10 @@
       const qWhite = byeP.no % 2 === 0 ? !!c.settings.initialWhite : !c.settings.initialWhite;   // bye'daki sporcu başlangıç rengi kuralına göre
       rd.byes.splice(bi, 1);
       rd.pairings.push({ board: rd.pairings.length + 1, w: qWhite ? q.id : byeP.id, b: qWhite ? byeP.id : q.id, result: null });
-      rd.notes = (rd.notes || []).concat(`${q.ad} ${q.soyad}: geç geldi, listenin sonuna eklendi; 1. turda bye’daki sporcuyla eşleştirildi.`);
+      rd.notes = (rd.notes || []).concat(`${q.firstname} ${q.surname}: geç geldi, listenin sonuna eklendi; 1. turda bye’daki sporcuyla eşleştirildi.`);
     } else {
       rd.byes.push({ p: q.id, type: 'zero' });
-      rd.notes = (rd.notes || []).concat(`${q.ad} ${q.soyad}: geç geldi, listenin sonuna eklendi; 1. turda eşleşecek rakip yok (puansız).`);
+      rd.notes = (rd.notes || []).concat(`${q.firstname} ${q.surname}: geç geldi, listenin sonuna eklendi; 1. turda eşleşecek rakip yok (puansız).`);
     }
     recalcRounds(c); return bi >= 0 ? 'bye' : 'zero';
   }
@@ -165,11 +165,11 @@
     const set = ids && ids.length ? new Set(ids) : null; let k = 0;
     c.players.forEach(p => {
       if (set && !set.has(p.id)) return;
-      const full = [p.ad, p.soyad].filter(Boolean).join(' ').split(/\s+/).filter(Boolean);
+      const full = [p.firstname, p.surname].filter(Boolean).join(' ').split(/\s+/).filter(Boolean);
       let ad, soyad;
-      if (mode === 'swap') { ad = p.soyad; soyad = p.ad; }
+      if (mode === 'swap') { ad = p.surname; soyad = p.firstname; }
       else { if (full.length < 2) return; soyad = full[0]; ad = full.slice(1).join(' '); }
-      if (ad !== p.ad || soyad !== p.soyad) { p.ad = ad; p.soyad = soyad; k++; }
+      if (ad !== p.firstname || soyad !== p.surname) { p.firstname = ad; p.surname = soyad; k++; }
     });
     if (k && canReorder(c)) renumber(c);
     return k;
@@ -241,7 +241,7 @@
       if (res.bye) rd.byes.push({ p: res.bye, type: 'bye' });
       rd.notes = (res.notes || []).slice(); c.skipNext = {}; c.excuse = {};
       rd.autoWd = autoWd.map(p => p.id);
-      autoWd.forEach(p => rd.notes.push(`${p.ad} ${p.soyad}: son turda hükmen yenik (gelmedi, dilekçe yok) – çekilmiş sayıldı, eşlendirmeye alınmadı.`));
+      autoWd.forEach(p => rd.notes.push(`${p.firstname} ${p.surname}: son turda hükmen yenik (gelmedi, dilekçe yok) – çekilmiş sayıldı, eşlendirmeye alınmadı.`));
       return res;
     } catch (e) { c.rounds.pop(); autoWd.forEach(p => { try { reactivatePlayer(c, p.id); } catch (x) { /* yut */ } }); throw e; }
   }
@@ -407,7 +407,7 @@
   /* ------------------------------------------------------------ KVKK */
   function stripPII(db) {
     const d = clone(db);
-    for (const t of Object.values(d.tournaments)) for (const c of t.cats) for (const p of c.players) { p.tc = ''; p.tel = ''; }
+    for (const t of Object.values(d.tournaments)) for (const c of t.cats) for (const p of c.players) { p.tc = ''; p.tel = ''; p.email = ''; }
     return d;
   }
   const maskTC = (s) => { s = String(s || ''); return s.length >= 6 ? s.slice(0, 3) + '*'.repeat(s.length - 5) + s.slice(-2) : (s ? '***' : ''); };
@@ -425,7 +425,7 @@
     q.no = +p.no || 0; q.status = p.status === 'withdrawn' ? 'withdrawn' : 'active'; q.joinRound = +p.joinRound || 1;
     q.wdFrom = p.wdFrom == null ? null : +p.wdFrom; if (p.wdRound != null) q.wdRound = +p.wdRound;
     q.wdNote = String(p.wdNote || ''); q.ratingLog = Array.isArray(p.ratingLog) ? p.ratingLog.slice(0, 50) : [];
-    ['ad', 'soyad', 'title', 'club', 'fed', 'fideNo', 'kulupNo', 'tip', 'kaynak', 'atitle', 'tc', 'tel', 'birthDate'].forEach(k => { q[k] = String(q[k] == null ? '' : q[k]).slice(0, 200); });
+    ['firstname', 'surname', 'email', 'title', 'club', 'fed', 'fideNo', 'kulupNo', 'tip', 'kaynak', 'atitle', 'tc', 'tel', 'birthDate'].forEach(k => { q[k] = String(q[k] == null ? '' : q[k]).slice(0, 200); });
     return q;
   }
   function fixCat(c) {

@@ -49,11 +49,11 @@
   const MASA = { slotH: 69.8, pitch: 73.4, top: 3.6, cuts: [3.6, 73.4, 77.0, 146.8, 150.4, 220.2, 223.6, 293.6],
     name: { maxPt: 24, minPt: 14, maxMm: 134 }, club: { maxPt: 15, minPt: 9, maxMm: 134 }, cat: { maxPt: 15, minPt: 8, maxMm: 40 } };
 
-  const yakaLines = (p) => ({ l1: ((p.title ? p.title + ' ' : '') + (p.ad || '')).trim(), l2: p.soyad || '', club: p.club || '' });
+  const yakaLines = (p) => ({ l1: ((p.title ? p.title + ' ' : '') + (p.firstname || '')).trim(), l2: p.surname || '', club: p.club || '' });
   function masaData(p, cat, o) {
     o = o || {};
     const rt = (v) => (v > 0 ? String(v) : (o.dashZero ? '-' : '0'));
-    return { cat, name: [p.title, p.ad, p.soyad].filter(Boolean).join(' '), club: p.club || '', elo: 'ELO: ' + rt(p.elo), ukd: 'UKD: ' + rt(p.rating) };
+    return { cat, name: [p.title, p.firstname, p.surname].filter(Boolean).join(' '), club: p.club || '', elo: 'ELO: ' + rt(p.elo), ukd: 'UKD: ' + rt(p.rating) };
   }
   function yakaPos(i, o) {
     o = o || {};

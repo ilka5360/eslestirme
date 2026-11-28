@@ -48,8 +48,8 @@
   /** Dosya/yedekten gelen DB'de TC/telefon yoksa yerel kayıttan geri al (aynı sporcu id). */
   function restorePII(nd, old) {
     const m = new Map();
-    for (const t of Object.values(old.tournaments)) for (const c of t.cats) for (const p of c.players) if (p.tc || p.tel) m.set(p.id, p);
-    for (const t of Object.values(nd.tournaments)) for (const c of t.cats) for (const p of c.players) { const o = m.get(p.id); if (o) { if (!p.tc) p.tc = o.tc; if (!p.tel) p.tel = o.tel; } }
+    for (const t of Object.values(old.tournaments)) for (const c of t.cats) for (const p of c.players) if (p.tc || p.tel || p.email) m.set(p.id, p);
+    for (const t of Object.values(nd.tournaments)) for (const c of t.cats) for (const p of c.players) { const o = m.get(p.id); if (o) { if (!p.tc) p.tc = o.tc; if (!p.tel) p.tel = o.tel; if (!p.email) p.email = o.email; } }
   }
 
   /* ---------------- anlık yedekler (son 5) ---------------- */

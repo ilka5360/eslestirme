@@ -13,22 +13,22 @@
     return s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
   }
   const ALIAS = {
-    gr: ['gr', 'grup', 'kategori', 'group'], isim: ['isim', 'adsoyad', 'adisoyadi', 'sporcu', 'oyuncu', 'adsoyadi'],
+    gr: ['gr', 'grup', 'kategori', 'group'],
     unvan: ['unvan', 'title'], tip: ['tip'], kulupno: ['kulupno'], kaynak: ['kaynak'], atitle: ['atitle'], id: ['idno', 'id', 'tc', 'tckn', 'tckimlikno', 'tcno'],
     ukd: ['ulusalrating', 'ukd', 'rtgnat', 'rating', 'rtg'], elo: ['ulsulararasirating', 'uluslararasirating', 'elo', 'rtgint', 'fiderating'],
     dogum: ['dogtar', 'dogumtarihi', 'birthday', 'dogum', 'dogumyili', 'birth'], fed: ['fed', 'federasyon', 'federation'],
     cinsiyet: ['cinsiyet', 'sex', 'gender'], kulup: ['kulup', 'il', 'sehir', 'club', 'clubname'], fideno: ['fideno', 'fideid'],
-    ad: ['ad', 'adi'], soyad: ['soyad', 'soyadi'], x: ['surname'], y: ['firstname'],
+    firstname: ['firstname', 'ad', 'adi'], surname: ['surname', 'soyad', 'soyadi'], email: ['email', 'eposta', 'mail'],
     tel: ['telefon', 'tel', 'gsm', 'cep', 'ceptelefonu', 'phone', 'mobile'],
   };
   const NAT_ALIAS = {
-    id: ['idno', 'id', 'tc', 'tckn', 'tckimlikno', 'tcno'], ad: ['firstname', 'ad', 'adi'], soyad: ['name', 'soyad', 'soyadi', 'lastname', 'surname'],
+    id: ['idno', 'id', 'tc', 'tckn', 'tckimlikno', 'tcno'], firstname: ['firstname', 'ad', 'adi'], surname: ['name', 'soyad', 'soyadi', 'lastname', 'surname'],
     isim: ['isim', 'adsoyad', 'adisoyadi', 'sporcu', 'playername', 'fullname'],
     dogum: ['birthday', 'dogtar', 'dogumtarihi', 'dogum', 'birth'], ukd: ['rtgnat', 'ulusalrating', 'ukd', 'rating', 'rtg'],
     elo: ['rtgint', 'ulsulararasirating', 'uluslararasirating', 'elo', 'fiderating', 'rtgfide', 'rtgi'], fideno: ['fideno', 'fideid', 'fide'],
     kulup: ['clubname', 'kulup', 'il', 'club'], fed: ['federation', 'fed', 'federasyon'],
   };
-  const TEL_ALIAS = { ad: ['ad', 'adi', 'firstname'], soyad: ['soyad', 'soyadi', 'name', 'lastname'], il: ['il', 'kulup', 'sehir'], tel: ['telefon', 'tel', 'gsm', 'cep', 'ceptelefonu'], no: ['no', 'sira'] };
+  const TEL_ALIAS = { firstname: ['ad', 'adi', 'firstname'], surname: ['soyad', 'soyadi', 'name', 'lastname'], il: ['il', 'kulup', 'sehir'], tel: ['telefon', 'tel', 'gsm', 'cep', 'ceptelefonu'], no: ['no', 'sira'] };
 
   /** Başlık satırı: ilk 10 satırda en az 3 tanınan başlık içeren satır. */
   function detectHeader(rows, aliases, minHits) {
@@ -89,19 +89,12 @@
   const up = (s) => String(s == null ? '' : s).trim().slice(0, LIMITS.cell).toLocaleUpperCase('tr');
   const txt = (s) => String(s == null ? '' : s).trim().slice(0, LIMITS.cell);
 
-  /** Ad/Soyad ayrıştırma: first name = ad, surname = soyad esastır; yoksa ad+soyad sütunları, yoksa isim sütunu (son kelime soyad). */
-  function splitName(isim, x, y, ad, soyad) {
-    if (ad && soyad) return { ad, soyad, guess: false };
-    // Excel'de "first name" sütunu ad'ı, "surname" sütunu soyad'ı taşır: ikisi de doluysa esas alınır (isim sütunu yalnız yedek)
-    if (x && y) return { ad: y, soyad: x, guess: false };
-    if (isim) {
-      const parts = isim.trim().split(/\s+/);
-      // TSF / Swiss-Manager listelerinde "isim" = SOYAD AD [AD2…]: ilk sözcük soyad, kalanı ad(lar)
-      if (parts.length === 1) return { ad: '', soyad: parts[0], guess: true };
-      const s = parts.shift(); return { ad: parts.join(' '), soyad: s, guess: true };
-    }
-    if (x || y) return { ad: y || '', soyad: x || '', guess: true };   // standart anlam: surname=soyad, first name=ad
-    return { ad: ad || '', soyad: soyad || '', guess: false };
+  /** Yalnız dış listeler için (Rating listesi "isim" sütunu): "SOYAD AD [AD2…]" -> ilk sözcük soyad. Sporcu kaydında isim alanı yoktur. */
+  function splitName(isim) {
+    const parts = String(isim || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return { firstname: '', surname: '' };
+    if (parts.length === 1) return { firstname: '', surname: parts[0] };
+    const s = parts.shift(); return { firstname: parts.join(' '), surname: s };
   }
 
   /** Kayıt listesi (sporcu kayıt.xlsx) -> sporcular + hata/uyarı. rows: dizi dizisi (başlık dahil). */
@@ -121,29 +114,23 @@
       if (!o.loose) return out;
       out.info.mode = 'tahmini';
       h = detectHeader(rows, ALIAS, 3);
-      if (!h) { h = detectHeader(rows, ALIAS, 2); if (h && (h.map.isim != null || h.map.ad != null || h.map.soyad != null || h.map.x != null)) few = true; else h = null; }
-      if (!h) { out.errors.push('Başlık satırı bulunamadı. Beklenen başlıklar: isim, Gr (kategori), ulusal rating, DogTar, Kulüp… İlk satırda sütun başlıkları olmalı.'); return out; }
+      if (!h) { h = detectHeader(rows, ALIAS, 2); if (h && (h.map.firstname != null || h.map.surname != null)) few = true; else h = null; }
+      if (!h) { out.errors.push('Başlık satırı bulunamadı. Beklenen başlıklar: firstname, surname, Gr (kategori), ulusal rating, DogTar, Kulup… İlk satırda sütun başlıkları olmalı.'); return out; }
     }
     const m = h.map; out.info.headerRow = h.row + 1;
-    /* Şablon başlıklarının yanında ayrı "AD" ve "SOYAD" sütunları varsa onlar esastır (isim sütunu sırası güvenilmez: SOYAD AD olabilir). */
-    ['ad', 'soyad'].forEach(k => { if (m[k] == null) rows[h.row].forEach((c, i) => { if (m[k] == null && ALIAS[k].includes(fold(c)) && !Object.values(m).includes(i)) m[k] = i; }); });
-    if (!(m.isim != null || (m.ad != null && m.soyad != null) || (m.x != null && m.y != null))) {
-      out.errors.push('Ad Soyad sütunu bulunamadı (isim veya ad+soyad gerekli). Bulunan başlıklar: ' + rows[h.row].map(c => txt(c)).filter(Boolean).join(', ').slice(0, 300));
+    if (m.firstname == null || m.surname == null) {
+      out.errors.push('firstname ve surname sütunları zorunludur' + (m.firstname == null && m.surname == null ? '' : ' (' + (m.firstname == null ? 'firstname' : 'surname') + ' bulunamadı)') + '. Bulunan başlıklar: ' + rows[h.row].map(c => txt(c)).filter(Boolean).join(', ').slice(0, 300));
       return out;
     }
     const maxYear = o.maxYear || new Date().getFullYear();
     const g = (r, k) => (m[k] != null ? r[m[k]] : '');
     const seenTC = new Map(), seenFide = new Map(), seenKey = new Map();
-    let guessed = 0, xyWarn = false;
-    if (m.isim == null && m.x != null && m.y != null) xyWarn = true;
     for (let i = h.row + 1; i < rows.length; i++) {
       const r = rows[i], xr = i + 1;
       if (!r || !r.some(c => String(c == null ? '' : c).trim() !== '')) continue;
       out.info.rows++;
-      const sp = splitName(txt(g(r, 'isim')), txt(g(r, 'x')), txt(g(r, 'y')), txt(g(r, 'ad')), txt(g(r, 'soyad')));
-      const ad = up(sp.ad), soyad = up(sp.soyad);
-      if (!ad && !soyad) { out.errors.push(`Satır ${xr}: Ad Soyad boş, satır alınmadı`); continue; }
-      if (sp.guess) guessed++;
+      const firstname = up(g(r, 'firstname')), surname = up(g(r, 'surname'));
+      if (!firstname || !surname) { out.errors.push(`Satır ${xr}: ${!firstname && !surname ? 'firstname ve surname' : !firstname ? 'firstname' : 'surname'} boş (zorunlu alan), satır alınmadı`); continue; }
       const tcRaw = digits(g(r, 'id')); let tc = '';
       if (tcRaw) {
         if (seenTC.has(tcRaw)) { out.errors.push(`Satır ${xr}: TC kimlik no Satır ${seenTC.get(tcRaw)} ile aynı, satır alınmadı`); continue; }
@@ -161,41 +148,24 @@
       const female = ['k', 'f', 'kiz', 'kadin', 'w', 'female', 'woman'].includes(sx) ? true : (['e', 'm', 'erkek', 'male', 'man'].includes(sx) ? false : null);
       let fideNo = digits(g(r, 'fideno')); if (/^0+$/.test(fideNo)) fideNo = '';
       if (fideNo) { if (seenFide.has(fideNo)) out.warnings.push(`Satır ${xr}: FIDE no Satır ${seenFide.get(fideNo)} ile aynı`); else seenFide.set(fideNo, xr); }
+      let email = txt(g(r, 'email')).slice(0, 120);
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { out.warnings.push(`Satır ${xr}: EMAIL geçersiz, boş bırakıldı`); email = ''; }
       const gr = txt(g(r, 'gr'));
       if (m.gr != null && !gr) out.warnings.push(`Satır ${xr}: Gr (kategori) boş → KATEGORİSİZ`);
-      const key = fold(ad + soyad) + '|' + dt.birthDate + '|' + gr;
+      const key = fold(firstname + surname) + '|' + dt.birthDate + '|' + gr;
       if (seenKey.has(key)) out.warnings.push(`Satır ${xr}: aynı kategoride aynı ad+doğum tarihi (Satır ${seenKey.get(key)})`); else seenKey.set(key, xr);
       out.players.push({
-        _n: { isim: txt(g(r, 'isim')), ad, soyad }, ad, soyad, title, rating, elo, birthDate: dt.birthDate, birthYear: dt.birthYear, female,
-        club: (txt(g(r, 'kulupname')) || txt(g(r, 'kulup'))).slice(0, 80), kulupNo: txt(g(r, 'kulupno')).slice(0, 12), tip: txt(g(r, 'tip')).slice(0, 20), kaynak: txt(g(r, 'kaynak')).slice(0, 40), atitle: up(g(r, 'atitle')).slice(0, 12), fed: up(g(r, 'fed')).replace(/\s+/g, ''), fideNo, tc, tel: normTel(g(r, 'tel')), src: { gr, row: xr },
+        firstname, surname, email, title, rating, elo, birthDate: dt.birthDate, birthYear: dt.birthYear, female,
+        club: (txt(g(r, 'kulup'))).slice(0, 80), kulupNo: txt(g(r, 'kulupno')).slice(0, 12), tip: txt(g(r, 'tip')).slice(0, 20), kaynak: txt(g(r, 'kaynak')).slice(0, 40), atitle: up(g(r, 'atitle')).slice(0, 12), fed: up(g(r, 'fed')).replace(/\s+/g, ''), fideNo, tc, tel: normTel(g(r, 'tel')), src: { gr, row: xr },
       });
     }
     if (few) out.warnings.unshift('Yalnız ' + Object.keys(m).length + ' sütun tanındı (' + Object.keys(m).join(', ') + '); diğer bilgiler boş kalacak');
-    if (guessed) out.warnings.unshift(`${guessed} satırda ad/soyad ayrımı tahmin edildi (son kelime soyad); önizlemede kontrol edin`);
-    if (xyWarn) out.warnings.unshift('"isim" sütunu yok: first name = ad, surname = soyad olarak okundu; kontrol edin');
     if (!out.players.length && !out.errors.length) out.errors.push('Dosyada sporcu satırı bulunamadı.');
     return out;
   }
 
   /* ----- çalışma kitabı okuma */
   function checkSize(size) { if (size > LIMITS.bytes) throw new Error(`Dosya çok büyük (${(size / 1048576).toFixed(1)} MB). En fazla ${LIMITS.bytes / 1048576} MB yüklenebilir.`); }
-  /** Ad/soyad okuma biçimi (önizlemede seçilir). 'auto': sütunlara göre; 'sa': "isim" = SOYAD AD; 'as': "isim" = AD SOYAD; 'swap': ad ile soyad yer değiştirir. */
-  function applyNameMode(list, mode) {
-    let k = 0;
-    list.forEach(p => {
-      const n = p._n; if (!n) return;
-      let ad = n.ad, soyad = n.soyad;
-      const t = String(n.isim || '').split(/\s+/).filter(Boolean);
-      if (mode === 'swap') { ad = n.soyad; soyad = n.ad; }
-      else if (mode === 'sa' && t.length > 1) { soyad = t[0]; ad = t.slice(1).join(' '); }
-      else if (mode === 'as' && t.length > 1) { soyad = t[t.length - 1]; ad = t.slice(0, -1).join(' '); }
-      ad = up(ad); soyad = up(soyad);
-      if (ad !== p.ad || soyad !== p.soyad) k++;
-      p.ad = ad; p.soyad = soyad;
-    });
-    return k;
-  }
-  const NAME_MODES = [['auto', 'Otomatik (dosyadaki Ad / Soyad sütunları)'], ['sa', '“isim” sütunu SOYAD AD biçiminde'], ['as', '“isim” sütunu AD SOYAD biçiminde'], ['swap', 'Ad ile soyadı yer değiştir']];
   /** .xlsx (zip: PK) ve eski .xls (OLE: D0 CF 11 E0) ikili; geri kalanı (CSV/TXT) metindir. */
   function isBinaryBook(u) { return (u[0] === 0x50 && u[1] === 0x4B) || (u[0] === 0xD0 && u[1] === 0xCF && u[2] === 0x11 && u[3] === 0xE0); }
   /** CSV baytlarını Türkçe karakterleri koruyarak çöz: UTF-8 (BOM'lu/BOM'suz), UTF-16 (BOM'lu), değilse Windows-1254. */
@@ -229,11 +199,11 @@
     for (const sn of wb.SheetNames) {
       const rows = sheetRows(X, wb.Sheets[sn]);
       const h = detectHeader(rows, TEL_ALIAS, 3);
-      const cm = h ? h.map : { ad: 1, soyad: 2, il: 3, tel: 4 };
+      const cm = h ? h.map : { firstname: 1, surname: 2, il: 3, tel: 4 };
       for (let i = h ? h.row + 1 : 0; i < rows.length; i++) {
-        const r = rows[i]; const ad = txt(r[cm.ad]), soyad = txt(r[cm.soyad]), tel = normTel(r[cm.tel]);
+        const r = rows[i]; const ad = txt(r[cm.firstname]), soyad = txt(r[cm.surname]), tel = normTel(r[cm.tel]);
         if (!ad && !soyad) continue; if (typeof r[0] === 'string' && /KATEGOR/i.test(r[0]) && !ad) continue;
-        list.push({ sheet: sn, ad: up(ad), soyad: up(soyad), tel, il: up(r[cm.il]) });
+        list.push({ sheet: sn, firstname: up(ad), surname: up(soyad), tel, il: up(r[cm.il]) });
       }
     }
     return list;
@@ -244,15 +214,15 @@
   function matchPhones(cats, list) {
     const tok = (a, b) => (a + ' ' + b).split(/\s+/).map(fold).filter(Boolean).sort().join('|');
     const exact = new Map(), toks = new Map();
-    list.forEach(e => { if (!e.tel) return; exact.set(fold(e.ad) + '|' + fold(e.soyad), e); toks.set(tok(e.ad, e.soyad), e); });
+    list.forEach(e => { if (!e.tel) return; exact.set(fold(e.firstname) + '|' + fold(e.surname), e); toks.set(tok(e.firstname, e.surname), e); });
     const hits = [], missing = [], used = new Set();
     for (const c of cats) for (const p of c.players) {
-      const e = exact.get(fold(p.ad) + '|' + fold(p.soyad)) || toks.get(tok(p.ad, p.soyad));
+      const e = exact.get(fold(p.firstname) + '|' + fold(p.surname)) || toks.get(tok(p.firstname, p.surname));
       if (e) { hits.push({ p, tel: e.tel, cat: c.name }); used.add(e); } else missing.push({ p, cat: c.name });
     }
     return { hits, missing, unused: list.filter(e => e.tel && !used.has(e)) };
   }
 
-  const API = { applyNameMode, NAME_MODES, matchPhones, Template: Tpl, LIMITS, TITLES, fold, ALIAS, NAT_ALIAS, TEL_ALIAS, detectHeader, parseDate, parseRating, parseRegistration, tcValid, normTel, digits, up, txt, splitName, readWorkbook, sheetRows, parsePhoneSheets, serialToYMD };
+  const API = { matchPhones, Template: Tpl, LIMITS, TITLES, fold, ALIAS, NAT_ALIAS, TEL_ALIAS, detectHeader, parseDate, parseRating, parseRegistration, tcValid, normTel, digits, up, txt, splitName, readWorkbook, sheetRows, parsePhoneSheets, serialToYMD };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.Importer = API;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -97,20 +97,52 @@
     const fm = /hükmen\s+yenik\s+sayılma\s+süresi\s*(\d+)/i.exec(flat1); if (fm) { res.extra.forfeitMin = +fm[1]; res.found.push('Hükmen süresi'); }
     const aw = /(İlk\s[^.]*?(?:Madalya|Kupa|Plaket|Ödül)[^.]*\.)/.exec(flat1); if (aw) { res.extra.awards = aw[1].replace(/\s+/g, ' ').trim(); res.found.push('Ödüller'); }
 
-    /* ---- Kategoriler (sol sütun tablosu) ---- */
-    const left = all.filter(i => i.x < mid - 8 && i.y <= hy);
-    const hdr = left.find(i => /^Kategori\s+Adı$/i.test(i.s.trim()));
-    const endRow = left.find(i => /^2\.3\.$/.test(i.s.trim()));
+    /* ---- Paragraf biçimi: "…Rize ili, Merkez ilçesinde, 28.02-01.03.2026 tarihleri arasında, … Salonu'nda, İsviçre sistem ile, 35 dakika 30 saniye eklemeli …" ---- */
+    if (!res.info.date) {
+      const dr = /(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?\s*[-–—]\s*(\d{1,2})\.(\d{1,2})\.(\d{4})/.exec(flat1) || /(\d{1,2})\.(\d{1,2})\.(\d{4})\s*tarihleri/i.exec(flat1);
+      if (dr && dr.length > 4) { const y2 = +dr[6], y1 = dr[3] ? +dr[3] : (+dr[2] > +dr[5] ? y2 - 1 : y2); res.info.date = iso(dr[1], dr[2], y1); res.info.dateEnd = iso(dr[4], dr[5], y2); res.found.push('Tarih'); }
+      else if (dr) { res.info.date = iso(dr[1], dr[2], dr[3]); res.found.push('Tarih'); }
+    }
+    if (!res.info.place) {
+      const pm = /tarihleri\s+arasında,?\s*([^,]+?)['’]\s*(?:n?[dt][ae])\b/i.exec(flat1);
+      if (pm) { res.info.place = pm[1].replace(/\s+/g, ' ').trim(); res.found.push('Yer'); }
+      const cm = /,\s*([^,]+?)\s+ili\s*,/i.exec(flat1), dm2 = /,\s*([^,]+?)\s+ilçesinde\s*,/i.exec(flat1);
+      if (cm) res.extra.city = cm[1].trim(); if (dm2) res.extra.district = dm2[1].trim();
+    }
+    if (!res.system) {
+      const sm = /(İsviçre|Isviçre|Isvicre|Swiss|Berger)\s+sistem/i.exec(flat1);
+      if (sm) { res.system = /berger/i.test(sm[1]) ? 'berger' : 'swiss'; res.found.push('Sistem'); }
+    }
+    if (!res.info.tempo) {
+      const tm2 = /(\d+)\s*dakika\s*(\d+)\s*saniye/i.exec(flat1) || /\b(\d{1,3})\s*\+\s*(\d{1,3})\b/.exec(flat1);
+      if (tm2) { res.info.tempo = `${tm2[1]}+${tm2[2]}`; res.found.push('Zaman kontrolü'); }
+    }
+    if (!res.extra.deadline) {
+      const sd = /ba[sş]vuru(?:lar)?[^.]{0,40}?(\d{1,2}\.\d{1,2}\.\d{4})\s*(?:tarihi\s*)?(?:saat\s*)?(\d{1,2}[.:]\d{2})?/i.exec(flat1);
+      if (sd) { res.extra.deadline = dmy(sd[1]) + (sd[2] ? ' ' + sd[2].replace('.', ':') : ''); res.found.push('Son başvuru'); }
+    }
+    if (!res.info.organizer) {
+      const om = /\b1\.1\.?\s*(.+?)\s+tarafından/i.exec(flat1);
+      if (om && om[1].length < 140) { res.info.organizer = om[1].replace(/\s+/g, ' ').trim(); res.found.push('Organizasyon'); }
+    }
+    const ph1 = /Telefon[^:]{0,20}:\s*(\+?[\d ()-]{7,20})/i.exec(flat); if (ph1) res.extra.phone = ph1[1].trim();
+    /* ---- Kategoriler (tablo; sol ya da sağ sütunda olabilir) ---- */
+    const hdr = all.find(i => /^Kategori\s+Ad[ıi]$/i.test(i.s.trim()));
     if (hdr) {
-      const top = hdr.y - 3, bot = endRow ? endRow.y + 4 : 0;
-      const tbl = left.filter(i => i.y < top && i.y > bot);
-      const hc = left.find(i => /^Kategori\s+Kriteri$/i.test(i.s.trim())), critX = hc ? (hdr.x + hc.x) / 2 : hdr.x + 60;
+      const hc = all.find(i => /^Kategori\s+Kriteri$/i.test(i.s.trim()) && Math.abs(i.y - hdr.y) < 4 && i.x > hdr.x);
+      const inR = hdr.x >= mid - 8, colOK = (i) => (inR ? i.x >= mid - 8 : i.x < mid - 8);
+      const col = all.filter(colOK);
+      /* tablonun altı: aynı sütunda aşağıdaki ilk madde/başlık numarası ("2.3.", "7.") — tablonun solunda durur */
+      const stops = col.filter(i => i.y < hdr.y - 8 && i.x <= hdr.x - 5 && /^\d+(\.\d+)*\.$/.test(i.s.trim()));
+      const bot = stops.length ? Math.max(...stops.map(i => i.y)) + 4 : 0, top = hdr.y - 3;
+      const tbl = col.filter(i => i.y < top && i.y > bot);
+      const critX = hc ? (hdr.x + hc.x) / 2 : hdr.x + 60;
       const crit = rowsOf(tbl.filter(i => i.x >= critX));
       const names = rowsOf(tbl.filter(i => i.x < critX));
       const buckets = names.map(r => ({ y: r.y, text: r.text, crit: '' }));
       // aynı kategori adı birden çok satıra yayılabilir ("8 Yaş" + "Kategorisi"): yakın satırları birleştir
       const merged = []; buckets.forEach(b => { const l = merged[merged.length - 1]; if (l && !/kategori/i.test(l.text) && /^kategori/i.test(b.text)) { l.text += ' ' + b.text; } else merged.push(b); });
-      crit.forEach(r => { let bi = 0, bd = 1e9; merged.forEach((b, i) => { const d = Math.abs(b.y - r.y); if (d < bd) { bd = d; bi = i; } }); merged[bi].crit += ' ' + r.text; });
+      crit.forEach(r => { let bi = 0, bd = 1e9; merged.forEach((b, i) => { const d = Math.abs(b.y - r.y); if (d < bd) { bd = d; bi = i; } }); if (merged[bi]) merged[bi].crit += ' ' + r.text; });
       merged.forEach(b => {
         const nm = tu(b.text.replace(/\s*Kategori(si)?\s*$/i, '').trim()); if (!nm) return;
         const age = /(\d+)\s*YAŞ/i.exec(nm), ys = (b.crit.match(/\b(?:19|20)\d{2}\b/g) || []).map(Number);
@@ -118,18 +150,28 @@
       });
       if (res.cats.length) res.found.push(res.cats.length + ' kategori');
     }
+    /* Tablo okunamadıysa düz metinden: "8 Yaş ve Altı (2019-2018)" / "10 Yaş ve Altı Kategorisi: 2017-2016 doğumlular" */
+    if (!res.cats.length) {
+      const re = /(\d{1,2})\s*Yaş(?:\s+ve\s+Altı)?(?:\s+Kategorisi)?\s*[:(–-]?\s*((?:19|20)\d{2})\s*[-–—/]\s*((?:19|20)\d{2})/gi; let mm;
+      while ((mm = re.exec(flat1))) { const y1 = +mm[2], y2 = +mm[3]; res.cats.push({ name: tu(mm[1] + ' Yaş' + (/ve\s+Altı/i.test(mm[0]) ? ' ve Altı' : '')), ageMax: +mm[1], minYear: Math.min(y1, y2), maxYear: Math.max(y1, y2), crit: mm[2] + '-' + mm[3] }); }
+      if (res.cats.length) { res.found.push(res.cats.length + ' kategori'); res.warnings.push('Kategoriler tablo yerine düz metinden okundu; kontrol edin.'); }
+    }
     const refs = res.cats.filter(c => c.ageMax && c.minYear).map(c => c.minYear + c.ageMax);
     if (refs.length && refs.every(r => r === refs[0]) && refs.length === res.cats.filter(c => c.ageMax).length) { res.refYear = refs[0]; res.refOK = true; }
     else if (res.cats.length) res.warnings.push('Kategorilerin doğum yılı aralıkları “N yaş ve altı” kuralıyla birebir kurulamadı; kategoriler boş açılır, yaşa göre dağıtımı kontrol edin.');
 
-    /* ---- Tur programı (sağ sütun tablosu) ---- */
-    const ph = all.find(i => i.x >= mid - 8 && /^TURNUVA\s+PROGRAMI$/i.test(i.s.trim()));
-    const cSaat = all.find(i => i.x >= mid - 8 && /^SAAT$/i.test(i.s.trim())), cTar = all.find(i => i.x >= mid - 8 && /^TARİH$/i.test(i.s.trim())), cPrg = all.find(i => i.x >= mid - 8 && /^PROGRAM$/i.test(i.s.trim()));
+    /* ---- Tur programı (tablo; sol ya da sağ sütunda ya da tüm genişlikte olabilir) ---- */
+    const ph = all.find(i => /^(\d+\.\s*)?(TURNUVA\s+)?(PROGRAMI|AKIŞI)$/i.test(i.s.trim()) || /TURNUVA\s+PROGRAMI/i.test(i.s));
+    const below = (re) => all.filter(i => ph && i.y < ph.y - 3 && i.y > ph.y - 70 && re.test(i.s.trim())).sort((a, b) => b.y - a.y)[0];
+    const cTar = below(/^(TARİH|GÜN)$/i), cSaat = below(/^(SAAT|ZAMAN)$/i), cPrg = below(/^(PROGRAM|ETKİNLİK|FAALİYET)$/i);
     if (ph && cSaat && cTar && cPrg) {
-      const next = all.find(i => i.x >= mid - 8 && i.y < cSaat.y - 5 && /^\d\.$/.test(i.s.trim()) && i.x < mid + 40);
-      const bot = next ? next.y + 2 : 0, rgt = all.filter(i => i.x >= mid - 8 && i.y < cSaat.y - 3 && i.y > bot);
-      const b1 = (cTar.x + cSaat.x) / 2, b2 = (cSaat.x + cPrg.x) / 2;
-      const dItems = rgt.filter(i => i.x < b1), tItems = rgt.filter(i => i.x >= b1 && i.x < b2), pItems = rgt.filter(i => i.x >= b2);
+      const xs = [cTar.x, cSaat.x, cPrg.x], allL = Math.max(...xs) < mid - 8, allR = Math.min(...xs) >= mid - 8;
+      const colOK = (i) => (allL ? i.x < mid - 8 : allR ? i.x >= mid - 8 : true), colHx = Math.min(...xs);
+      const next = all.find(i => colOK(i) && i.y < cSaat.y - 5 && /^\d+\.$/.test(i.s.trim()) && i.x <= colHx + 6 && i.x < ph.x + 40);
+      const bot = next ? next.y + 2 : 0, rgt = all.filter(i => colOK(i) && i.y < cSaat.y - 3 && i.y > bot);
+      const ord = [cTar, cSaat, cPrg].sort((p, q) => p.x - q.x), bnd = [(ord[0].x + ord[1].x) / 2, (ord[1].x + ord[2].x) / 2];
+      const colOf = (i) => (i.x < bnd[0] ? ord[0] : i.x < bnd[1] ? ord[1] : ord[2]);
+      const dItems = rgt.filter(i => colOf(i) === cTar), tItems = rgt.filter(i => colOf(i) === cSaat), pItems = rgt.filter(i => colOf(i) === cPrg);
       const prog = rowsOf(pItems);
       const dates = []; rowsOf(dItems).forEach(r => { const mm = /(\d{1,2})\s+([A-Za-zÇĞİÖŞÜçğıöşü]+)\s+(\d{4})/.exec(r.text); if (mm && MONTHS[tl(mm[2])]) dates.push({ y: r.y, d: iso(mm[1], MONTHS[tl(mm[2])], mm[3]) }); });
       const tRows = rowsOf(tItems);

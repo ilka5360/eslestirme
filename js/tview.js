@@ -6,7 +6,7 @@
   const CT = () => A.ctx();
   const CAT = () => A.ctx().cat;
   const TN = () => A.ctx().tn;
-  const nm = (p) => (p ? `${p.soyad || ''} ${p.ad || ''}`.trim() : '—');   // listelerde SOYAD Ad
+  const nm = (p) => (p ? `${p.surname || ''} ${p.firstname || ''}`.trim() : '—');   // listelerde SOYAD Ad
   const clubS = (c) => { c = String(c || ''); return c.length > 25 ? c.slice(0, 25).trim() + '…' : c; };   // tablolarda kulüp adı en çok 25 karakter
   const nmt = (p) => (p && p.title ? p.title + ' ' : '') + nm(p);   // sıralamalarda unvan isimden önce
   const nmw = (p) => nmt(p) + (p.status === 'withdrawn' ? ' (çekildi' + (p.wdFrom ? ', ' + p.wdFrom + '. turdan' : '') + ')' : '');
@@ -199,7 +199,7 @@
   }
   /* Şablonun TÜM bilgi alanları tek formda (Sporcu ekle/düzenle + sihirbaz elle ekleme). x: id öneki. */
   const TITLES = ['GM', 'IM', 'WGM', 'FM', 'WIM', 'CM', 'WFM', 'WCM'];
-  const pForm = (p, x) => { x = x || 'f_'; return `<div class="row"><div><label>Ad</label><input id="${x}ad" value="${esc(p.ad || '')}" maxlength="60"></div><div><label>Soyad</label><input id="${x}soyad" value="${esc(p.soyad || '')}" maxlength="60"></div></div>
+  const pForm = (p, x) => { x = x || 'f_'; return `<div class="row"><div><label>firstname (ad) *</label><input id="${x}ad" required aria-required="true" value="${esc(p.firstname || '')}" maxlength="60"></div><div><label>surname (soyad) *</label><input id="${x}soyad" required aria-required="true" value="${esc(p.surname || '')}" maxlength="60"></div></div>
     <div class="row" style="margin-top:8px"><div><label>Unvan</label><select id="${x}title"><option value=""></option>${TITLES.map(t => `<option ${p.title === t ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
     <div><label>Cinsiyet</label><select id="${x}f"><option value="">Belirtilmedi</option><option value="0" ${p.female === false ? 'selected' : ''}>Erkek</option><option value="1" ${p.female ? 'selected' : ''}>Kız / Kadın</option></select></div>
     <div><label>Doğum tarihi</label><input id="${x}bd" type="date" value="${esc(p.birthDate || '')}"></div></div>
@@ -207,20 +207,22 @@
     <div><label>FIDE No</label><input id="${x}fide" value="${esc(p.fideNo || '')}" maxlength="12" inputmode="numeric"></div><div><label>Federasyon</label><input id="${x}fed" value="${esc(p.fed || '')}" maxlength="4"></div></div>
     <div class="row" style="margin-top:8px"><div><label>Kulüp</label><input id="${x}club" value="${esc(p.club || '')}" maxlength="80"></div><div><label>Kulüp No</label><input id="${x}kno" value="${esc(p.kulupNo || '')}" maxlength="12"></div></div>
     <details style="margin-top:8px"><summary>Diğer şablon alanları (Tip, Kaynak, atitle)</summary><div class="row" style="margin-top:8px"><div><label>Tip</label><input id="${x}tip" value="${esc(p.tip || '')}" maxlength="20"></div><div><label>Kaynak</label><input id="${x}kay" value="${esc(p.kaynak || '')}" maxlength="40"></div><div><label>atitle</label><input id="${x}at" value="${esc(p.atitle || '')}" maxlength="12"></div></div></details>
-    <div class="row" style="margin-top:8px">${A.piiInput(x + 'tc', p.tc, 'ID no (TC kimlik)')}${A.piiInput(x + 'tel', p.tel, 'Telefon')}</div>`; };
+    <div class="row" style="margin-top:8px">${A.piiInput(x + 'tc', p.tc, 'ID no (TC kimlik)')}${A.piiInput(x + 'tel', p.tel, 'TEL')}</div>
+    <div class="row" style="margin-top:8px"><div><label>EMAIL</label><input id="${x}email" type="email" value="${esc(p.email || '')}" maxlength="120" autocomplete="off"></div></div>`; };
   function readForm(d, p, x) {
     x = x || 'f_';
     const v = (id) => $('#' + x + id, d).value.trim();
     const rt = (n) => { n = Math.round(+n || 0); return n >= 100 && n <= 4000 ? n : 0; };
-    p.ad = I.up(v('ad')); p.soyad = I.up(v('soyad')); p.rating = rt(v('rating')); p.elo = rt(v('elo')); p.title = v('title');
+    p.firstname = I.up(v('ad')); p.surname = I.up(v('soyad')); p.rating = rt(v('rating')); p.elo = rt(v('elo')); p.title = v('title');
     p.club = v('club').slice(0, 80); p.kulupNo = v('kno').slice(0, 12); p.tip = v('tip').slice(0, 20); p.kaynak = v('kay').slice(0, 40); p.atitle = I.up(v('at')).slice(0, 12);
     const dt = I.parseDate(v('bd')); p.birthDate = dt.birthDate; p.birthYear = dt.birthYear || (p.birthYear && !v('bd') ? p.birthYear : '');
     if (!v('bd') && !dt.birthYear) { p.birthDate = ''; p.birthYear = ''; }
     p.female = v('f') === '' ? null : v('f') === '1'; p.fideNo = I.digits(v('fide')).slice(0, 12); p.fed = v('fed').toUpperCase().slice(0, 4);
-    p.tc = I.digits(v('tc')).slice(0, 11); p.tel = I.normTel(v('tel')).slice(0, 12);
+    p.tc = I.digits(v('tc')).slice(0, 11); p.tel = I.normTel(v('tel')).slice(0, 12); p.email = v('email').slice(0, 120);
     return p;
   }
-  A.pForm = pForm; A.readForm = readForm;
+  const NAME_REQ = 'firstname (ad) ve surname (soyad) boş olamaz';
+  A.NAME_REQ = NAME_REQ; A.pForm = pForm; A.readForm = readForm;
   ACT.addP = guard(() => {
     const c0 = CAT(), st = M.addStage(c0);
     if (!st) return A.toast('Sporcu ekleme yalnızca 2. tur eşlendirilmeden önce yapılabilir.', 5000);
@@ -229,7 +231,7 @@
       : st === 'round2' ? '<div class="note info" style="margin-top:10px">Sporcu 2. turdan itibaren eklenir; başlangıç sıralaması yeniden yapılır, sonra 2. turu eşlendirirsiniz.</div>' : '';
     A.dialog(`<h3>Sporcu ekle</h3>${pForm({})}${info}<div class="row tight" style="margin-top:14px"><button class="b" id="ok">Ekle</button><button class="b sec" data-close>Vazgeç</button></div>`,
     d => { A.bindPII(d); $('#ok', d).onclick = async () => {
-      const p = readForm(d, M.newPlayer({})); if (!p.soyad && !p.ad) return A.toast('Ad soyad girin');
+      const p = readForm(d, M.newPlayer({})); if (!p.firstname || !p.surname) return A.toast(NAME_REQ);
       const c = CAT(); d.close();
       if (st === 'round1') {
         try { await A.snap('sporcu-1-tur'); M.addToRound1(c, p); } catch (e) { return A.toast(e.message, 6000); }
@@ -239,7 +241,7 @@
     }; });
   });
   ACT.editP = guard((el) => { const c = CAT(), p = pById(c, el.dataset.a); A.dialog(`<h3>Sporcuyu düzenle</h3>${pForm(p)}${c.started && c.rounds.length > 3 ? '<div class="note">4. turdan sonra başlangıç numarası değiştirilemez; puan değişikliği yalnızca görüntüyü etkiler.</div>' : ''}<div class="row tight" style="margin-top:14px"><button class="b" id="ok">Kaydet</button><button class="b sec" data-close>Vazgeç</button></div>`,
-    d => { A.bindPII(d); $('#ok', d).onclick = () => { readForm(d, p); if (!p.ad && !p.soyad) return A.toast('Ad soyad boş olamaz'); refreshNumbers(c); A.save(); d.close(); A.render(); }; }); });
+    d => { A.bindPII(d); $('#ok', d).onclick = () => { const q = readForm(d, Object.assign({}, p)); if (!q.firstname || !q.surname) return A.toast(NAME_REQ); Object.assign(p, q); refreshNumbers(c); A.save(); d.close(); A.render(); }; }); });
   function refreshNumbers(c) { if (c.started) { if (c.system === 'swiss' && c.rounds.length <= 3) M.renumber(c); } else if (!(c.bergerDrawn && c.players.length <= R.BERGER_MAX)) M.renumber(c); }
   ACT.spAllChk = (el) => { const ids = CAT().players.map(p => p.id); if (el.checked) ids.forEach(id => spSel.add(id)); else ids.forEach(id => spSel.delete(id)); A.render(); };
   ACT.spChk = (el) => { if (el.checked) spSel.add(el.dataset.a); else spSel.delete(el.dataset.a); A.render(); };
@@ -316,7 +318,7 @@
     A.dialog(`<h3>Deneme verisi</h3><label>Kaç deneme sporcusu eklensin?</label><input type="number" id="dn" value="24" min="1" max="300"><div class="row tight" style="margin-top:10px"><button class="b" id="ok">Ekle</button><button class="b sec" data-close>Vazgeç</button></div>`, d => {
       $('#ok', d).onclick = () => {
         const n = Math.max(1, Math.min(300, +$('#dn', d).value || 0)); const clubs = ['RİZE', 'TRABZON', 'ARTVİN', 'ORDU', 'GİRESUN'], list = [];
-        for (let i = 1; i <= n; i++) list.push({ ad: 'SPORCU' + i, soyad: 'DENEME' + String.fromCharCode(65 + (i * 7) % 26), rating: Math.random() < 0.2 ? 0 : 1000 + Math.floor(Math.random() * 700), club: clubs[i % 5], birthYear: 2008 + (i % 8), female: i % 4 === 0 });
+        for (let i = 1; i <= n; i++) list.push({ firstname: 'SPORCU' + i, surname: 'DENEME' + String.fromCharCode(65 + (i * 7) % 26), rating: Math.random() < 0.2 ? 0 : 1000 + Math.floor(Math.random() * 700), club: clubs[i % 5], birthYear: 2008 + (i % 8), female: i % 4 === 0 });
         M.addPlayers(CAT(), list); A.save(); d.close(); A.render();
       };
     });
@@ -324,13 +326,13 @@
   /* ---- içe aktarma (aynı importer; tüm satırlar bu kategoriye girer) */
   function importDialog(res, name) {
     const parsed = res.players;
-    if (!parsed.length) return A.toast(res.errors[0] || 'Sporcu satırı bulunamadı. Başlıkları kontrol edin (isim, UKD, Kulüp, DogTar).', 6000);
+    if (!parsed.length) return A.toast(res.errors[0] || 'Sporcu satırı bulunamadı. Başlıkları kontrol edin (firstname, surname, ulusal rating, Kulup, DogTar).', 6000);
     parsed.forEach(p => { p.id = M.uid(); p.kisiId = p.id; });
     const years = parsed.map(p => p.birthYear).filter(Boolean);
     const lo = years.length ? Math.min(...years) : '', hi = years.length ? Math.max(...years) : '';
     A.dialog(`<h3>İçe aktar: ${parsed.length} sporcu bulundu</h3><p class="muted">${esc(name || '')} · eşleme: <b>${res.info.mode === 'sablon' ? 'şablon biçimi' : 'tahmini'}</b> · ${res.errors.length} hata, ${res.warnings.length} uyarı. Tüm satırlar <b>${esc(CAT().name)}</b> kategorisine eklenir.</p>
       ${res.errors.length ? `<details class="iss err"><summary>${res.errors.length} hata (bu satırlar alınmadı)</summary><ul>${res.errors.slice(0, 30).map(x => `<li>${esc(x)}</li>`).join('')}</ul></details>` : ''}
-      <div style="margin-bottom:8px"><label>Ad / soyad okuma</label><select id="nmMode">${I.NAME_MODES.map(m => `<option value="${m[0]}">${m[1]}</option>`).join('')}</select><div class="muted" id="nmSample">${esc(parsed.slice(0, 3).map(p => p.soyad + ' ' + p.ad).join(' · '))}</div><small class="muted">Soyada göre sıralama için “Ad Soyad” doğru ayrılmalı: örnekte ilk sütun ad, ikinci soyad görünmelidir.</small></div>
+      
       <p class="muted">İsterseniz doğum yılı aralığı verin (boş bırakırsanız hepsi alınır).</p>
       <div class="row"><div><label>Doğum yılı (en erken)</label><input id="y1" type="number" placeholder="${lo}"></div><div><label>Doğum yılı (en geç)</label><input id="y2" type="number" placeholder="${hi}"></div></div>
       <div id="cnt" class="note ok" style="margin-top:10px">${parsed.length} sporcu eklenecek</div>
@@ -338,7 +340,6 @@
       const sel = () => { const a = +$('#y1', d).value || 0, b = +$('#y2', d).value || 9999; return parsed.filter(p => (!a && b === 9999) ? true : (p.birthYear && p.birthYear >= a && p.birthYear <= b)); };
       const upd = () => { $('#cnt', d).textContent = sel().length + ' sporcu eklenecek'; };
       $('#y1', d).oninput = upd; $('#y2', d).oninput = upd;
-      $('#nmMode', d).onchange = (e) => { I.applyNameMode(parsed, e.target.value); $('#nmSample', d).textContent = parsed.slice(0, 3).map(p => p.soyad + ' ' + p.ad).join(' · '); };
       $('#ok', d).onclick = async () => { const l = sel(); d.close(); await A.snap('içe-aktarma'); const late = M.addPlayers(CAT(), l); A.save(); A.render(); A.toast(l.length + ' sporcu eklendi' + (late ? ' (' + late + ' sporcu 2. turdan itibaren)' : '')); };
     });
   }
@@ -363,9 +364,9 @@
       <label class="chk" style="margin-top:8px"><input type="checkbox" id="fnew" checked> Zaten listede olanları (ad+soyad aynı) atla</label>
       <div class="tblw" style="max-height:300px;margin-top:8px"><table id="ftl"></table></div>
       <div class="row tight" style="margin-top:10px"><button class="b" id="ok">Seçilenleri aktar</button><button class="b sec" id="all">Tümünü seç / kaldır</button><button class="b sec" data-close>Vazgeç</button></div>`, d => {
-      const have = new Set(cat.players.map(p => I.fold(p.ad + p.soyad)));
+      const have = new Set(cat.players.map(p => I.fold(p.firstname + p.surname)));
       const get = () => { const [t, c] = $('#ft', d).value.split('|'); return A.db().tournaments[t].cats.find(x => x.id === c); };
-      const rows = () => { const a1 = +$('#fy1', d).value || 0, a2 = +$('#fy2', d).value || 9999; return get().players.filter(p => (!a1 && a2 === 9999) || (p.birthYear && p.birthYear >= a1 && p.birthYear <= a2)).filter(p => !($('#fnew', d).checked && have.has(I.fold(p.ad + p.soyad)))); };
+      const rows = () => { const a1 = +$('#fy1', d).value || 0, a2 = +$('#fy2', d).value || 9999; return get().players.filter(p => (!a1 && a2 === 9999) || (p.birthYear && p.birthYear >= a1 && p.birthYear <= a2)).filter(p => !($('#fnew', d).checked && have.has(I.fold(p.firstname + p.surname)))); };
       const draw = () => { $('#ftl', d).innerHTML = '<tr><th></th><th>Soyad Ad</th><th>Kulüp</th><th>Doğum</th><th>UKD</th></tr>' + rows().map(p => `<tr><td><input type="checkbox" class="fc" data-id="${esc(p.id)}" checked style="width:auto"></td><td>${esc(nm(p))}</td><td>${esc(p.club)}</td><td>${esc(p.birthYear || '')}</td><td>${p.rating || ''}</td></tr>`).join(''); };
       ['ft', 'fy1', 'fy2', 'fnew'].forEach(i => { $('#' + i, d).onchange = draw; }); draw();
       $('#all', d).onclick = () => { const cs = $$('.fc', d); const on = cs.some(c => !c.checked); cs.forEach(c => { c.checked = on; }); };

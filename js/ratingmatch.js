@@ -16,20 +16,20 @@
       const h = I.detectHeader(rows, I.NAT_ALIAS, 3);
       if (!h) continue;
       const m = h.map;
-      if (!(m.isim != null || (m.ad != null && m.soyad != null))) continue;
+      if (!(m.isim != null || (m.firstname != null && m.surname != null))) continue;
       if (m.ukd == null && m.elo == null) continue;
       const list = []; const warns = [];
       for (let i = h.row + 1; i < rows.length; i++) {
         const r = rows[i]; const g = (k) => (m[k] != null ? r[m[k]] : '');
         if (!r.some(c => String(c == null ? '' : c).trim() !== '')) continue;
-        let ad = I.up(g('ad')), soyad = I.up(g('soyad'));
-        if (m.isim != null && !(ad && soyad)) { const s = I.splitName(I.txt(g('isim')), '', '', '', ''); ad = I.up(s.ad); soyad = I.up(s.soyad); }
+        let ad = I.up(g('firstname')), soyad = I.up(g('surname'));
+        if (m.isim != null && !(ad && soyad)) { const s = I.splitName(I.txt(g('isim'))); ad = I.up(s.firstname); soyad = I.up(s.surname); }
         if (!ad && !soyad) continue;
         const dt = I.parseDate(g('dogum'), maxYear);
         const w = [];
         const ukd = I.parseRating(g('ukd'), 'UKD', i + 1, w), elo = I.parseRating(g('elo'), 'ELO', i + 1, w);
         let fideNo = I.digits(g('fideno')); if (/^0+$/.test(fideNo)) fideNo = '';
-        list.push({ ad, soyad, tc: I.digits(g('id')), birthDate: dt.birthDate, birthYear: dt.birthYear, ukd, elo, fideNo, il: I.up(g('kulup')), fed: I.up(g('fed')), row: i + 1 });
+        list.push({ firstname: ad, surname: soyad, tc: I.digits(g('id')), birthDate: dt.birthDate, birthYear: dt.birthYear, ukd, elo, fideNo, il: I.up(g('kulup')), fed: I.up(g('fed')), row: i + 1 });
       }
       if (!list.length) continue;
       return { sheet: sn, list, hasUkd: m.ukd != null, hasElo: m.elo != null, hasFide: m.fideno != null, hasTC: m.id != null, errors: [] };
@@ -43,8 +43,8 @@
     for (const e of list) {
       if (e.tc.length === 11) put(ix.tc, e.tc, e);
       put(ix.fide, e.fideNo, e);
-      if (e.birthDate) put(ix.full, fold(e.ad) + '|' + fold(e.soyad) + '|' + e.birthDate, e);
-      const t = tokens(e.ad, e.soyad);
+      if (e.birthDate) put(ix.full, fold(e.firstname) + '|' + fold(e.surname) + '|' + e.birthDate, e);
+      const t = tokens(e.firstname, e.surname);
       if (e.birthYear) put(ix.tokYear, t + '#' + e.birthYear, e);
       put(ix.tok, t, e);
     }
@@ -65,9 +65,9 @@
       const one = (arr, t) => { if (arr && arr.length === 1) { cand = arr; type = t; return true; } if (arr && arr.length > 1) { cand = arr; type = 'belirsiz'; return true; } return false; };
       (p.tc.length === 11 && one(ix.tc.get(p.tc), 'kesin-tc')) ||
         (p.fideNo && nat.hasFide && one(ix.fide.get(p.fideNo), 'kesin-fide')) ||
-        (p.birthDate && one(ix.full.get(fold(p.ad) + '|' + fold(p.soyad) + '|' + p.birthDate), 'kesin-ad')) ||
-        (p.birthYear && one(ix.tokYear.get(tokens(p.ad, p.soyad) + '#' + p.birthYear), 'olasi')) ||
-        one(ix.tok.get(tokens(p.ad, p.soyad)), 'zayif');
+        (p.birthDate && one(ix.full.get(fold(p.firstname) + '|' + fold(p.surname) + '|' + p.birthDate), 'kesin-ad')) ||
+        (p.birthYear && one(ix.tokYear.get(tokens(p.firstname, p.surname) + '#' + p.birthYear), 'olasi')) ||
+        one(ix.tok.get(tokens(p.firstname, p.surname)), 'zayif');
       const row = { kisiId, p, cats: cn, type, cand, match: type !== 'belirsiz' && cand.length === 1 ? cand[0] : null, oldUkd: p.rating, oldElo: p.elo, newUkd: null, newElo: null, note: '', apply: false };
       if (row.match) proposals(row, nat);
       rows.push(row);
@@ -123,12 +123,12 @@
     }
     return n;
   }
-  /** Bağlantı şablonu: yalnız https; {ad} {soyad} {fideNo} {tc}(izinli ise). */
+  /** Bağlantı şablonu: yalnız https; {firstname} {surname} {fideNo} {tc}(izinli ise); eski {ad} {soyad} da çalışır. */
   function linkFrom(tpl, p, allowTC) {
     if (!tpl || !/^https:\/\//i.test(tpl)) return '';
     if (/\{fideNo\}/.test(tpl) && !p.fideNo) return '';
     if (/\{tc\}/.test(tpl) && (!allowTC || !p.tc)) return '';
-    const u = tpl.replace(/\{(ad|soyad|fideNo|tc)\}/g, (_, k) => encodeURIComponent(p[k] || ''));
+    const u = tpl.replace(/\{(firstname|surname|ad|soyad|fideNo|tc)\}/g, (_, k) => encodeURIComponent(p[k === 'ad' ? 'firstname' : k === 'soyad' ? 'surname' : k] || ''));
     return /^https:\/\//i.test(u) ? u : '';
   }
 

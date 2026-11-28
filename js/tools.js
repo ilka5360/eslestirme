@@ -5,7 +5,7 @@
   const M = window.Model, S = window.Store, I = window.Importer, RM = window.RatingMatch, XO = window.XlsxOut, C = window.Cards;
   const guard = A.mut;
   const collator = new Intl.Collator('tr');
-  const nm = (p) => `${p.soyad || ''} ${p.ad || ''}`.trim();
+  const nm = (p) => `${p.surname || ''} ${p.firstname || ''}`.trim();
   A.tools = {};
 
   /* ---------- yazdırma kökü: yalnızca #printRoot basılır */
@@ -43,7 +43,7 @@
     return h;
   };
   const kkClub = (c) => String(c || '').slice(0, 25);   // İl/kulüp sütunu en çok 25 karakter
-  const kkPlayers = (c, st) => c.players.filter(p => st.withdrawn || p.status !== 'withdrawn').slice().sort((a, b) => collator.compare(a.ad, b.ad) || collator.compare(a.soyad, b.soyad));
+  const kkPlayers = (c, st) => c.players.filter(p => st.withdrawn || p.status !== 'withdrawn').slice().sort((a, b) => collator.compare(a.firstname, b.firstname) || collator.compare(a.surname, b.surname));
   const telFmt = (t) => (t && t.length === 10 ? `(${t.slice(0, 3)}) ${t.slice(3, 6)}-${t.slice(6)}` : t || '');
   ACT.kkCat = (el) => { const { tn } = A.ctx(), st = kst(tn); const s = st.cats || new Set(tn.cats.map(c => c.id)); if (el.checked) s.add(el.dataset.a); else s.delete(el.dataset.a); st.cats = s; A.render(); };
   ACT.kkOpt = (el) => { kst(A.ctx().tn)[el.dataset.a] = el.checked; A.render(); };
@@ -63,7 +63,7 @@
       const tb = document.createElement('table'); const hd = tb.createTHead().insertRow();
       ['No', 'Ad', 'Soyad', 'İl', 'Telefon', 'İmza / Not'].forEach(x => { const th = document.createElement('th'); th.textContent = x; hd.appendChild(th); });
       const body = tb.createTBody(); const ps = kkPlayers(c, st);
-      for (let i = 0; i < ps.length + st.blank; i++) { const p = ps[i], r = body.insertRow(); [i + 1, p ? p.ad : '', p ? p.soyad : '', p ? kkClub(p.club) : '', p && st.phone ? telFmt(p.tel) : '', ''].forEach(x => { r.insertCell().textContent = x; }); }
+      for (let i = 0; i < ps.length + st.blank; i++) { const p = ps[i], r = body.insertRow(); [i + 1, p ? p.firstname : '', p ? p.surname : '', p ? kkClub(p.club) : '', p && st.phone ? telFmt(p.tel) : '', ''].forEach(x => { r.insertCell().textContent = x; }); }
       sec.appendChild(tb); root.appendChild(sec);
     });
     A.setPrint(root); A.doPrint();
@@ -76,7 +76,7 @@
       const m = I.matchPhones(tn.cats, list), withTel = list.filter(e => e.tel).length;
       A.dialog(`<h3>Telefon eşleme sonucu</h3><div class="note ${m.hits.length ? 'ok' : 'err'}"><b>${m.hits.length}</b> sporcu eşleşti · <b>${m.missing.length}</b> sporcu bulunamadı · dosyada ${withTel} telefonlu satır</div>
         ${m.missing.length ? `<details><summary>Bulunamayanlar (${m.missing.length})</summary><ul>${m.missing.slice(0, 60).map(x => `<li>${esc(nm(x.p))} <span class="muted">${esc(x.cat)}</span></li>`).join('')}</ul></details>` : ''}
-        ${m.unused.length ? `<details><summary>Dosyada olup eşleşmeyenler (${m.unused.length})</summary><ul>${m.unused.slice(0, 60).map(x => `<li>${esc(x.ad)} ${esc(x.soyad)}</li>`).join('')}</ul></details>` : ''}
+        ${m.unused.length ? `<details><summary>Dosyada olup eşleşmeyenler (${m.unused.length})</summary><ul>${m.unused.slice(0, 60).map(x => `<li>${esc(x.firstname)} ${esc(x.surname)}</li>`).join('')}</ul></details>` : ''}
         <p class="muted">Telefon 10 hane değilse sporcu atlanmaz, olduğu gibi yazılır. Mevcut telefonların üzerine yazılır.</p>
         <div class="row tight"><button class="b" id="ok" ${m.hits.length ? '' : 'disabled'}>Uygula</button><button class="b sec" data-close>Vazgeç</button></div>`, d => {
         $('#ok', d).onclick = () => { m.hits.forEach(h => { h.p.tel = h.tel; tn.cats.forEach(c => c.players.forEach(q => { if (q.kisiId === h.p.kisiId) q.tel = h.tel; })); }); A.save(); d.close(); A.toast(m.hits.length + ' sporcunun telefonu işlendi'); A.render(); };
@@ -101,7 +101,7 @@
   function cardItems(tn, st) {
     const sel = st.cats || new Set(tn.cats.map(c => c.id));
     const cats = tn.cats.filter(c => sel.has(c.id)); const out = [];
-    const srt = (a, b) => (st.sort === 'alfa' ? collator.compare(a.ad, b.ad) || collator.compare(a.soyad, b.soyad) : (a.no || 9999) - (b.no || 9999));
+    const srt = (a, b) => (st.sort === 'alfa' ? collator.compare(a.firstname, b.firstname) || collator.compare(a.surname, b.surname) : (a.no || 9999) - (b.no || 9999));
     const items = cats.map(c => ({ c, ps: c.players.filter(p => (st.withdrawn || p.status !== 'withdrawn') && !st.ex.has(p.id)).sort(srt) }));
     if (st.merge) out.push(items.flatMap(x => x.ps.map(p => ({ p, cat: x.c.name }))));
     else items.forEach(x => out.push(x.ps.map(p => ({ p, cat: x.c.name }))));
@@ -190,7 +190,7 @@
     A.dialog(`<h3>Kulüp adlarını toplu yapıştır</h3><p class="muted">Her satıra <code>Ad Soyad</code> sekme (Tab) veya noktalı virgül <code>;</code> ve <code>Kulüp adı</code> yazın (Excel’den iki sütun kopyalayabilirsiniz). Ad+soyad eşleşenlere kulüp adı yazılır.</p><textarea id="cl" maxlength="200000" placeholder="ENES TANRIVERDİ&#9;DARÜŞŞAFAKA SPOR KULÜBÜ"></textarea><div class="row tight" style="margin-top:10px"><button class="b" id="ok">Uygula</button><button class="b sec" data-close>Vazgeç</button></div>`, d => {
       $('#ok', d).onclick = () => {
         const map = new Map(); $('#cl', d).value.split(/\r?\n/).forEach(l => { const m = l.split(/\t|;/); if (m.length >= 2 && m[0].trim()) map.set(I.fold(m[0]), m.slice(1).join(' ').trim().slice(0, 80)); });
-        let n = 0; tn.cats.forEach(c => c.players.forEach(p => { const v = map.get(I.fold(p.ad + ' ' + p.soyad)) || map.get(I.fold(p.ad + p.soyad)) || map.get(I.fold(p.soyad + ' ' + p.ad)) || map.get(I.fold(p.soyad + p.ad)); if (v != null) { p.club = v; n++; } }));
+        let n = 0; tn.cats.forEach(c => c.players.forEach(p => { const v = map.get(I.fold(p.firstname + ' ' + p.surname)) || map.get(I.fold(p.firstname + p.surname)) || map.get(I.fold(p.surname + ' ' + p.firstname)) || map.get(I.fold(p.surname + p.firstname)); if (v != null) { p.club = v; n++; } }));
         A.save(); d.close(); A.toast(n + ' sporcunun kulübü güncellendi'); A.render();
       };
     });
@@ -220,7 +220,7 @@
         ${st.rows.filter(x => x.type !== 'yok').sort((a, b) => (b.apply - a.apply) || (LVR(a.type) - LVR(b.type))).map(x => { const lv = LV[x.type]; const dif = x.newUkd != null ? x.newUkd - x.oldUkd : null; return `<tr class="${x.apply ? '' : 'dim'}"><td><input type="checkbox" data-act="rkSel" data-a="${x.kisiId}" ${x.apply ? 'checked' : ''} ${x.match && !x.locked && (x.newUkd != null || x.newElo != null) ? '' : 'disabled'} aria-label="Uygula"></td>
           <td><b>${esc(nm(x.p))}</b><br><small class="muted">${esc(fmtDate(x.p.birthDate))}</small>${x.locked ? '<br><span class="pill gray">turnuva başladı</span>' : ''}</td><td>${esc(x.cats.join(', '))}</td>
           <td><span class="pill ${lv[0] === 'kesin' ? '' : lv[0] === 'belirsiz' ? 'err' : 'warn'}">${lv[0]}</span><br><small class="muted">${esc(lv[1])}</small>
-            ${x.type === 'belirsiz' ? `<select data-act="rkCand" data-a="${x.kisiId}" style="margin-top:4px"><option value="">aday seç…</option>${x.cand.map((e, i) => `<option value="${i}">${esc(e.ad + ' ' + e.soyad)} · ${esc(fmtDate(e.birthDate))} · UKD ${e.ukd}</option>`).join('')}</select>` : ''}</td>
+            ${x.type === 'belirsiz' ? `<select data-act="rkCand" data-a="${x.kisiId}" style="margin-top:4px"><option value="">aday seç…</option>${x.cand.map((e, i) => `<option value="${i}">${esc(e.firstname + ' ' + e.surname)} · ${esc(fmtDate(e.birthDate))} · UKD ${e.ukd}</option>`).join('')}</select>` : ''}</td>
           <td class="n">${x.oldUkd || '–'}${x.newUkd != null ? ' → <b>' + x.newUkd + '</b>' : ''}${x.note ? `<br><small class="muted">${esc(x.note)}</small>` : ''}</td><td class="n ${dif > 0 ? 'up' : dif < 0 ? 'dn' : ''}">${dif == null ? '' : (dif > 0 ? '+' : '') + dif}</td>
           <td class="n">${x.oldElo || '–'}${x.newElo != null ? ' → <b>' + x.newElo + '</b>' : ''}</td></tr>`; }).join('')}</table></div>
         <div class="row tight noprint" style="margin-top:12px"><button class="b big" data-act="rkApply" ${sel ? '' : 'disabled'}>Seçilenleri uygula (${sel})</button></div>${!sel && lockedN ? `<div class="note">${lockedN} sporcunun kategorisinde eşleştirme yapıldığı için güncelleme yapılamaz (turnuva başladıktan sonra UKD değişikliği engellenir).</div>` : ''}</div>`;
@@ -259,7 +259,7 @@
   ACT.rkNone = () => { rk(A.ctx().tn).rows.forEach(x => { x.apply = false; }); A.render(); };
   ACT.rkCand = (el) => { const st = rk(A.ctx().tn), x = st.rows.find(r => r.kisiId === el.dataset.a); if (x && el.value !== '') { RM.chooseCandidate(x, +el.value, st.nat); x.apply = x.newUkd != null || x.newElo != null; } A.render(); };
   ACT.rkMissX = () => {
-    const { tn } = A.ctx(), st = rk(tn); const rows = [['Ad', 'Soyad', 'Kategori', 'Doğum', 'UKD']].concat(st.rows.filter(x => x.type === 'yok').map(x => [x.p.ad, x.p.soyad, x.cats.join(', '), x.p.birthDate, x.p.rating]));
+    const { tn } = A.ctx(), st = rk(tn); const rows = [['Ad', 'Soyad', 'Kategori', 'Doğum', 'UKD']].concat(st.rows.filter(x => x.type === 'yok').map(x => [x.p.firstname, x.p.surname, x.cats.join(', '), x.p.birthDate, x.p.rating]));
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Bulunamadı'); XLSX.writeFile(wb, A.safeName(tn.info.name) + '-ukd-bulunamayanlar.xlsx');
   };
   ACT.rkApply = guard(async () => {
