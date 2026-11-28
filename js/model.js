@@ -507,7 +507,8 @@
   function exportBundle(db, o) {
     o = o || {};
     let d = o.includePII ? clone(db) : stripPII(db);
-    if (o.tid) { const t = d.tournaments[o.tid]; d.tournaments = {}; if (t) d.tournaments[o.tid] = t; d.cur = o.tid; }
+    const ids = o.tids || (o.tid ? [o.tid] : null);
+    if (ids) { const all = d.tournaments; d.tournaments = {}; ids.forEach(id => { if (all[id]) d.tournaments[id] = all[id]; }); d.cur = ids[0]; }
     d.exported = new Date().toISOString(); delete d.dirty;
     return d;
   }

@@ -4,7 +4,7 @@
   const A = window.App, { $, $$, esc, ACT, fmt, fmtDate } = A;
   const M = window.Model, S = window.Store, R = window.Rules, I = window.Importer, E = window.Engine;
   A.M = M; A.S = S; A.E = E;
-  A.VERSION = { no: 61, date: '28.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
+  A.VERSION = { no: 62, date: '28.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
 
   /* ------------------------------------------------------------- veri */
   const boot = S.load();
@@ -95,7 +95,7 @@
   };
   setTimeout(() => A.checkUpdate(false), 4000);
 
-  const SAFE_RO = new Set(['goR', 'standR', 'expStand', 'print', 'goStand', 'unarchive', 'expP', 'goTab', 'hideBanner', 'backup', 'openT', 'goCat', 'goTool']);
+  const SAFE_RO = new Set(['goR', 'standR', 'expStand', 'print', 'goStand', 'unarchive', 'expP', 'goTab', 'hideBanner', 'backup', 'backupFull', 'openT', 'goCat', 'goTool']);
   A.render = function () {
     R_ = parseRoute();
     const ctx = A.ctx();
@@ -216,31 +216,51 @@
     if (and) return 'Telefon/tablet: “İndirilenler” (Download) klasörüne kaydedildi; Dosyalar uygulamasından açabilirsiniz.';
     return 'Tarayıcınızın indirme klasörüne (genellikle “İndirilenler”) kaydedildi. Tarayıcı her seferinde yer soruyorsa seçtiğiniz klasördedir.';
   };
+  /** Yedek dosyasını üretip indirir. tids: yedeklenecek turnuva kimlikleri (null = hepsi). */
+  async function runBackup(tids, pii, img) {
+    const b = M.exportBundle(DB, { includePII: pii, tids });
+    if (img) {
+      b.assets = {};
+      for (const id of Object.keys(b.tournaments)) { b.assets[id] = {}; for (const slot of ['header', 'yHeader', 'footer', 'logoL', 'logoR', 'cardBg']) { const bl = await S.getBlob(id, slot); if (bl) b.assets[id][slot] = await S.toDataURL(bl); } }
+    }
+    const names = Object.keys(b.tournaments).map(id => b.tournaments[id].info.name);
+    const nm = names.length === 1 ? A.safeName(names[0]) : (tids && tids.length ? `${names.length}-turnuva` : 'Tum-turnuvalar');
+    const fname = backupName(nm);
+    A.download(new Blob([JSON.stringify(b, null, 1)], { type: 'application/json' }), fname);
+    const actAll = Object.values(DB.tournaments).filter(t => t.status === 'aktif').every(t => b.tournaments[t.id]);
+    if (!tids || actAll) { DB.lastBackup = Date.now(); DB.dirty = false; A.save({ clean: true }); }
+    return { fname, pii, n: names.length };
+  }
+  const backupDone = (r) => A.dialog(`<h3>Yedek hazır</h3><p style="margin-top:0"><b>${esc(r.fname)}</b> <span class="muted">(${r.n} turnuva)</span></p>
+    <p><b>Nerede:</b> ${esc(A.saveWhere())}</p>
+    ${r.pii ? '<div class="note"><b>Bu dosyada TC kimlik ve telefon bilgileri var.</b> Kişisel veridir; güvenli saklayın, başkalarıyla paylaşmayın.</div>' : '<p class="muted">Bu yedekte TC kimlik ve telefon bilgileri yok.</p>'}
+    <div class="row tight" style="margin-top:12px"><button class="b" data-close>Tamam</button></div>`);
+  /** Turnuva ekranındaki tek tık tam yedek: yalnız bu turnuva, TC/telefon ve kart görselleri dahil. */
+  ACT.backupFull = async () => {
+    const { tn } = A.ctx(); if (!tn) return;
+    try { const r = await runBackup([tn.id], true, true); A.render(); backupDone(r); } catch (e) { A.fail(e); }
+  };
   ACT.backup = (el) => {
     const tid = el && el.dataset && el.dataset.a || null;
     $('#dlg').open && $('#dlg').close();
-    A.dialog(`<h3>${tid ? 'Turnuva yedeği' : 'Yedek indir'} (JSON)</h3>
+    const acts = tid ? [] : Object.values(DB.tournaments).filter(t => t.status === 'aktif').sort((a, b) => (b.created || 0) - (a.created || 0));
+    if (!tid && !acts.length) return A.toast('Yedeklenecek aktif turnuva yok. Arşivdekiler için turnuvanın kendi sayfasındaki yedek düğmesini kullanın.', 5000);
+    const list = tid ? '' : `<p class="muted" style="margin:0 0 6px">Yedeklenecek aktif turnuvalar${acts.length > 1 ? ' (istediklerinizi işaretleyin)' : ''}:</p>
+      ${acts.length > 1 ? '<label class="chk"><input type="checkbox" id="bk_all" checked> <b>Tümü</b></label>' : ''}
+      <div class="stack" style="margin:4px 0 8px">${acts.map(t => `<label class="chk"><input type="checkbox" class="bk_t" value="${esc(t.id)}" checked> ${esc(t.info.name)} <span class="muted">· ${M.countPlayers(t)} sporcu</span></label>`).join('')}</div>`;
+    A.dialog(`<h3>${tid ? 'Turnuva yedeği' : 'Yedek indir'} (JSON)</h3>${list}
       <label class="chk"><input type="checkbox" id="bk_pii" checked> TC kimlik ve telefon bilgilerini de ekle <span class="muted">(yedekten dönünce bu bilgiler gerekir)</span></label>
       <div class="note"><b>Kişisel veri uyarısı (KVKK):</b> TC kimlik numarası ve telefon kişisel veridir. Bu bilgileri içeren yedek dosyasını yalnızca güvenli bir yerde saklayın; e-posta, mesajlaşma uygulamaları veya ortak klasörlerle paylaşmayın, işi bitince silin.</div>
       <label class="chk"><input type="checkbox" id="bk_img"> Kart görsellerini de ekle (dosya büyür)</label>
       <div class="row tight" style="margin-top:12px"><button class="b" id="bk_ok">İndir</button><button class="b sec" data-close>Vazgeç</button></div>`, d => {
+      const all = $('#bk_all', d), ts = [...d.querySelectorAll('.bk_t')];
+      if (all) { all.onchange = () => ts.forEach(c => { c.checked = all.checked; }); ts.forEach(c => { c.onchange = () => { all.checked = ts.every(x => x.checked); }; }); }
       $('#bk_ok', d).onclick = async () => {
         try {
-          const o = { includePII: $('#bk_pii', d).checked, tid }; const b = M.exportBundle(DB, o);
-          if ($('#bk_img', d).checked) {
-            b.assets = {};
-            for (const id of Object.keys(b.tournaments)) { b.assets[id] = {}; for (const slot of ['header', 'yHeader', 'footer', 'logoL', 'logoR', 'cardBg']) { const bl = await S.getBlob(id, slot); if (bl) b.assets[id][slot] = await S.toDataURL(bl); } }
-          }
-          const nm = tid ? A.safeName(DB.tournaments[tid].info.name) : 'Tum-turnuvalar';
-          const fname = backupName(nm);
-          A.download(new Blob([JSON.stringify(b, null, 1)], { type: 'application/json' }), fname);
-          if (!tid) { DB.lastBackup = Date.now(); DB.dirty = false; A.save({ clean: true }); }
-          const pii = o.includePII;
-          d.close(); A.render();
-          A.dialog(`<h3>Yedek hazır</h3><p style="margin-top:0"><b>${esc(fname)}</b></p>
-            <p><b>Nerede:</b> ${esc(A.saveWhere())}</p>
-            ${pii ? '<div class="note"><b>Bu dosyada TC kimlik ve telefon bilgileri var.</b> Kişisel veridir; güvenli saklayın, başkalarıyla paylaşmayın.</div>' : '<p class="muted">Bu yedekte TC kimlik ve telefon bilgileri yok.</p>'}
-            <div class="row tight" style="margin-top:12px"><button class="b" data-close>Tamam</button></div>`);
+          const tids = tid ? [tid] : ts.filter(c => c.checked).map(c => c.value);
+          if (!tids.length) return A.toast('En az bir turnuva seçin.');
+          const r = await runBackup(tids, $('#bk_pii', d).checked, $('#bk_img', d).checked);
+          d.close(); A.render(); backupDone(r);
         } catch (e) { A.fail(e); }
       };
     });
@@ -552,7 +572,7 @@
     const ro = tn.status === 'arsiv';
     let h = `${ro ? `<div class="note bn"><span><b>Arşivdeki turnuva:</b> salt okunur görünüm.</span><button class="b sm" data-act="unarchive">Arşivden çıkar</button></div>` : ''}
       <div class="thead noprint"><div><h2 style="margin:0">${esc(tn.info.name)} ${statusPill(tn)}</h2><div class="muted">${esc(fmtDate(tn.info.date))}${tn.info.place ? ' · ' + esc(tn.info.place) : ''}</div></div>
-      <div class="row tight"><a class="b sec sm" href="#/kayit/${tn.id}">Kayıt Kontrol</a><a class="b sec sm" href="#/kart/${tn.id}">Kartlar</a><a class="b sec sm" href="#/sorgu/${tn.id}">UKD/ELO</a><a class="b ${R_.cid === 'ayarlar' ? '' : 'sec'} sm" href="#/t/${tn.id}/ayarlar">⚙ Ayarlar</a></div></div>
+      <div class="row tight"><button class="b sm" data-act="backupFull" title="Bu turnuvanın tam yedeğini (TC/telefon ve görseller dahil) indirir">💾 Yedekle</button><a class="b sec sm" href="#/kayit/${tn.id}">Kayıt Kontrol</a><a class="b sec sm" href="#/kart/${tn.id}">Kartlar</a><a class="b sec sm" href="#/sorgu/${tn.id}">UKD/ELO</a><a class="b ${R_.cid === 'ayarlar' ? '' : 'sec'} sm" href="#/t/${tn.id}/ayarlar">⚙ Ayarlar</a></div></div>
       <div class="cattabs noprint" role="tablist">${tn.cats.map(c => `<a role="tab" class="ctab ${cat && c.id === cat.id && R_.cid !== 'ayarlar' ? 'on' : ''}" href="#/t/${tn.id}/${c.id}/${R_.tab || 'spor'}">${esc(c.name)} <span>${c.players.length}</span></a>`).join('')}
         <button class="ctab add" data-act="addCat">+ Kategori</button></div>`;
     const base = `#/t/${tn.id}`, c0 = cat || tn.cats.find(c => c.id === DB.curCat) || tn.cats[0], cb = c0 ? `${base}/${c0.id}` : base;
