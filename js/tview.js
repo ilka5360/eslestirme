@@ -40,7 +40,7 @@
     const tr = M.totalRounds(c);
     const label = s.roundsManual ? '<span class="pill warn" title="Hakem tarafından elle değiştirildi">Elle</span>' : (sug.rounds != null ? `<span class="pill" title="${esc(sug.note)}">Öneri (${n} sporcu)</span>` : '<span class="pill err">Öneri yok</span>');
     autoSched(tn, c);
-    let h = `<h2>${esc(c.name)} – tur ve zaman bilgileri</h2><div class="card">
+    let h = `<h2>${esc(c.name)} – kategori ve tur başlat</h2><div class="card">
       <div class="kv"><div><small>Sporcu sayısı</small><b>${n}</b></div><div><small>Sistem</small><b style="font-size:16px">${n >= 3 ? sysName(sys) : '—'}</b></div>
       <div><small>Tur sayısı</small><b>${tr || '—'}</b></div><div><small>Durum</small><b style="font-size:16px">${started ? 'Başladı' : 'Kayıt / hazırlık'}</b></div></div>
       <div class="note info">Prosedür md.17(4): Sistem ve tur sayısı <b>teknik toplantıda</b> duyurulur, “Kategoriyi başlat” ile kilitlenir. ${esc(sug.note)}</div>`;
@@ -57,8 +57,8 @@
     if (sys === 'swiss' && n >= 3 && n <= R.BERGER_MAX && !started) h += `<div class="note">${n} sporcu için Berger önerilir (Berger en çok ${R.BERGER_MAX} sporcu); İsviçre seçtiniz.</div>`;
     if (sys === 'berger' && n > R.BERGER_MAX && !started) h += `<div class="note err">Berger sistemi en çok ${R.BERGER_MAX} sporcu için kullanılır; ${n} sporcu için İsviçre seçin.</div>`;
     h += '</div>';
-    const startRow = `<div class="card"><div class="note info">Ayarlar ve tur programı tamam ise <b>İleri</b> ile kategoriyi başlatın; ardından eşlendirme yapılır.</div><div class="row tight" style="margin-top:12px">${!started ? `<button class="b big" data-act="start" ${n < 3 || (sys === 'swiss' && !(tr >= 1)) ? 'disabled title="Önce tur sayısını girin"' : ''}>İleri → Kategoriyi / turları başlat</button>` : `<button class="b sec" data-act="unstart" ${c.rounds.some(r => r.pairings.some(p => p.result)) ? 'disabled' : ''}>Başlatmayı geri al</button> <a class="b" href="#/t/${tn.id}/${c.id}/rounds">Eşlendirmeye git →</a>`}</div></div>`;
-        return h + schedCard(tn, c) + tbSettings(c) + startRow;
+    const startRow = `<div class="card startcard"><div class="note info">Aşağıdaki sistem, tur sayısı ve tur programı tamamsa kategoriyi başlatın; ardından eşlendirme yapılır.</div><div class="row tight" style="margin-top:12px">${!started ? `<button class="b big" data-act="start" ${n < 3 || (sys === 'swiss' && !(tr >= 1)) ? 'disabled title="Önce tur sayısını girin"' : ''}>▶ Kategoriyi / turları başlat</button>` : `<button class="b sec" data-act="unstart" ${c.rounds.some(r => r.pairings.some(p => p.result)) ? 'disabled' : ''}>Başlatmayı geri al</button> <a class="b" href="#/t/${tn.id}/${c.id}/rounds">Eşlendirmeye git →</a>`}</div></div>`;
+        return startRow + h + schedCard(tn, c) + tbSettings(c);
   }
   ACT.setSys = guard((el) => { try { M.setSystem(CAT(), el.value); A.save(); } catch (e) { A.toast(e.message); } A.render(); });
   ACT.setRounds = guard((el) => { try { M.setRounds(CAT(), el.value); A.save(); } catch (e) { A.toast(e.message); } A.render(); });
@@ -195,7 +195,7 @@
         ${wd ? A.ib('reactP', p.id, 'undo', 'Çekilmeyi geri al') : (c.started && !can && c.system === 'swiss' ? A.ib('wdP', p.id, 'wd', 'Turnuvadan çekil', 'red') : '')}
         ${can ? A.ib('delP', p.id, 'del', 'Sporcuyu sil', 'red') : ''}</td></tr>`; }).join('') || `<tr><td colspan="${cols.length + 2}" class="muted">Henüz sporcu eklenmedi. Excel/CSV içe aktarın, tablodan yapıştırın veya tek tek ekleyin.</td></tr>`}
     </table></div></div>
-    <div class="row tight noprint wnav" style="margin-top:12px"><button class="b" data-act="goAyar" ${n < 3 ? 'disabled title="En az 3 sporcu gerekli"' : ''}>İleri → Tur ve zaman bilgileri</button></div>`;
+    <div class="row tight noprint wnav" style="margin-top:12px"><button class="b" data-act="goAyar" ${n < 3 ? 'disabled title="En az 3 sporcu gerekli"' : ''}>İleri → Kategori ve tur başlat</button></div>`;
   }
   /* Şablonun TÜM bilgi alanları tek formda (Sporcu ekle/düzenle + sihirbaz elle ekleme). x: id öneki. */
   const TITLES = ['GM', 'IM', 'WGM', 'FM', 'WIM', 'CM', 'WFM', 'WCM'];
@@ -387,7 +387,7 @@
   /* ============================================================= TURLAR */
   const completed = (c) => M.completedRounds(c);
   function vRounds(tn, c) {
-    if (!c.started) return `<h2>Turlar</h2><div class="card"><div class="note">Bu kategori henüz başlatılmadı. “Tur ve zaman bilgileri” sekmesinde sistemi, tur sayısını ve programı kontrol edip <b>İleri</b> ile kategoriyi başlatın’a basın.</div><a class="b" href="#/t/${tn.id}/${c.id}/ayar">Ayar sekmesine git</a></div>`;
+    if (!c.started) return `<h2>Turlar</h2><div class="card"><div class="note">Bu kategori henüz başlatılmadı. “Kategori ve tur başlat” sekmesinde sistemi, tur sayısını ve programı kontrol edip <b>İleri</b> ile kategoriyi başlatın’a basın.</div><a class="b" href="#/t/${tn.id}/${c.id}/ayar">Ayar sekmesine git</a></div>`;
     autoSched(tn, c);
     const sys = c.system, Rn = M.totalRounds(c), cr = completed(c);
     let view = rv[c.id] != null ? rv[c.id] : 1;

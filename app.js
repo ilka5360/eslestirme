@@ -4,7 +4,7 @@
   const A = window.App, { $, $$, esc, ACT, fmt, fmtDate } = A;
   const M = window.Model, S = window.Store, R = window.Rules, I = window.Importer, E = window.Engine;
   A.M = M; A.S = S; A.E = E;
-  A.VERSION = { no: 62, date: '28.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
+  A.VERSION = { no: 63, date: '28.11.2026' };   // sw.js içindeki önbellek adıyla (eslestirme-vNN) aynı tutulur
 
   /* ------------------------------------------------------------- veri */
   const boot = S.load();
@@ -383,7 +383,7 @@
       ${yr ? `<div class="note ${yr.warnings.length ? '' : 'info'}" style="margin-top:10px"><b>${esc(W.yonFile || 'Yönerge')}</b> okundu: ${esc(yr.found.join(', ') || 'bilgi bulunamadı')}.${yr.cats.length ? `<br>Kategoriler: ${esc(yr.cats.map(c => c.name + (c.minYear ? ' (' + (c.minYear === c.maxYear ? c.minYear : c.minYear + '–' + c.maxYear) + ')' : '')).join(' · '))}` : ''}${yr.extra.quota ? `<br>Kontenjan: ${yr.extra.quota} sporcu` : ''}${yr.warnings.length ? `<br>⚠ ${esc(yr.warnings.join(' '))}` : ''}</div>` : ''}</div>`;
     return yonCard + `<div class="card"><div class="row frm">${f('name', 'Turnuva adı *', 'Örn. 3. Mübin Boysan Anma Turnuvası')}${f('date', 'Başlama tarihi', '', 'date')}${f('dateEnd', 'Bitiş tarihi', '', 'date')}</div>
       <div class="row frm" style="margin-top:10px">${f('place', 'Yer', 'Rize')}${f('arbiter', 'Başhakem')}${f('tempo', 'Zaman kontrolü', '35+30')}
-      <div><label>Yaş hesabı yılı</label><input type="number" data-act="wi" data-a="refYear" min="1990" max="2100" value="${W.info.refYear}"><small class="muted">Yaş = bu yıl − doğum yılı</small></div></div><div class="note info">Başlama / bitiş tarihi ve zaman kontrolü, kategorilerin <b>Tur ve zaman bilgileri</b> sayfasına otomatik taşınır (1. tur 10:00, turlar arası 150 dk).</div></div>${wnav(0, 2, 'İleri →')}`;
+      <div><label>Yaş hesabı yılı</label><input type="number" data-act="wi" data-a="refYear" min="1990" max="2100" value="${W.info.refYear}"><small class="muted">Yaş = bu yıl − doğum yılı</small></div></div><div class="note info">Başlama / bitiş tarihi ve zaman kontrolü, kategorilerin <b>Kategori ve tur başlat</b> sayfasına otomatik taşınır (1. tur 10:00, turlar arası 150 dk).</div></div>${wnav(0, 2, 'İleri →')}`;
   }
   /* Yönerge PDF'si → sihirbaz alanları (sporcular hariç). Mevcut turnuvalara dokunmaz. */
   const applyYon = (r, fname) => {
@@ -563,24 +563,23 @@
   };
 
   /* ============================================================= TURNUVA ÇERÇEVESİ */
-  const TABS = [['spor', 'Sporcular'], ['ayar', 'Tur ve zaman bilgileri'], ['rounds', 'Eşlendirme ve sonuç'], ['stand', 'Sıralama'], ['cross', 'Çapraz Tablo']];
-  const FLOWSTEP = { spor: 2, ayar: 5, rounds: 7, stand: 8, cross: 9 };
+  const TABS = [['spor', 'Sporcular'], ['ayar', 'Kategori ve tur başlat'], ['rounds', 'Eşlendirme ve sonuç'], ['stand', 'Sıralama'], ['cross', 'Çapraz Tablo']];
   function vTournament(ctx) {
     const { tn, cat } = ctx;
     if (!tn) return '<div class="note">Turnuva bulunamadı.</div>';
-    if (!R_.cid) { setTimeout(() => A.go(tn.cats[0] ? A.tnPath(tn, tn.cats[0].id, 'spor') : A.tnPath(tn, 'ayarlar')), 0); return ''; }
+    if (!R_.cid) { setTimeout(() => A.go(A.tnPath(tn, 'ayarlar')), 0); return ''; }
     const ro = tn.status === 'arsiv';
     let h = `${ro ? `<div class="note bn"><span><b>Arşivdeki turnuva:</b> salt okunur görünüm.</span><button class="b sm" data-act="unarchive">Arşivden çıkar</button></div>` : ''}
       <div class="thead noprint"><div><h2 style="margin:0">${esc(tn.info.name)} ${statusPill(tn)}</h2><div class="muted">${esc(fmtDate(tn.info.date))}${tn.info.place ? ' · ' + esc(tn.info.place) : ''}</div></div>
-      <div class="row tight"><button class="b sm" data-act="backupFull" title="Bu turnuvanın tam yedeğini (TC/telefon ve görseller dahil) indirir">💾 Yedekle</button><a class="b sec sm" href="#/kayit/${tn.id}">Kayıt Kontrol</a><a class="b sec sm" href="#/kart/${tn.id}">Kartlar</a><a class="b sec sm" href="#/sorgu/${tn.id}">UKD/ELO</a><a class="b ${R_.cid === 'ayarlar' ? '' : 'sec'} sm" href="#/t/${tn.id}/ayarlar">⚙ Ayarlar</a></div></div>
-      <div class="cattabs noprint" role="tablist">${tn.cats.map(c => `<a role="tab" class="ctab ${cat && c.id === cat.id && R_.cid !== 'ayarlar' ? 'on' : ''}" href="#/t/${tn.id}/${c.id}/${R_.tab || 'spor'}">${esc(c.name)} <span>${c.players.length}</span></a>`).join('')}
+      <div class="row tight"><button class="b sm" data-act="backupFull" title="Bu turnuvanın tam yedeğini (TC/telefon ve görseller dahil) indirir">💾 Yedekle</button><a class="b sec sm" href="#/kayit/${tn.id}">Kayıt Kontrol</a><a class="b sec sm" href="#/kart/${tn.id}">Kartlar</a><a class="b sec sm" href="#/sorgu/${tn.id}">UKD/ELO</a></div></div>`;
+    const base = `#/t/${tn.id}`, home = R_.cid === 'ayarlar', c0 = cat || tn.cats.find(c => c.id === DB.curCat) || tn.cats[0], cb = c0 ? `${base}/${c0.id}` : base;
+    const mainTabs = [['home', 'Ana sayfa', 'ti-home', `${base}/ayarlar`, home], ['spor', 'Sporcular', 'ti-users', c0 ? `${cb}/spor` : '', !home && R_.tab === 'spor'], ['ayar', 'Kategori ve tur başlat', 'ti-player-play', c0 ? `${cb}/ayar` : '', !home && R_.tab === 'ayar']];
+    h += `<nav class="maintabs noprint" aria-label="Turnuva bölümleri">${mainTabs.map(([k, l, ic, href, on]) => href ? `<a class="${on ? 'on' : ''}" href="${href}" ${on ? 'aria-current="page"' : ''}>${l.replace('Kategori ve tur başlat', '<span class="lg">Kategori ve tur başlat</span><span class="sm">Tur başlat</span>')}</a>` : `<span class="dis" title="Önce kategori ekleyin">${l}</span>`).join('')}</nav>`;
+    h += `<div class="cattabs noprint" role="tablist" aria-label="Kategoriler">${tn.cats.map(c => `<a role="tab" class="ctab ${cat && c.id === cat.id && !home ? 'on' : ''}" href="#/t/${tn.id}/${c.id}/${!home && R_.tab ? R_.tab : 'spor'}">${esc(c.name)} <span>${c.players.length}</span></a>`).join('')}
         <button class="ctab add" data-act="addCat">+ Kategori</button></div>`;
-    const base = `#/t/${tn.id}`, c0 = cat || tn.cats.find(c => c.id === DB.curCat) || tn.cats[0], cb = c0 ? `${base}/${c0.id}` : base;
-    const flowHref = (n) => ({ 1: `${base}/ayarlar`, 2: c0 && `${cb}/spor`, 3: `${base}/ayarlar`, 4: `${base}/ayarlar`, 5: c0 && `${cb}/ayar`, 6: c0 && `${cb}/ayar`, 7: c0 && `${cb}/rounds`, 8: c0 && `${cb}/stand`, 9: c0 && `${cb}/cross` }[n]);
-    if (R_.cid === 'ayarlar') return h + A.flowBar(1, flowHref) + vTnSettings(tn);
+    h += `<div class="subtabs noprint">${TABS.filter(t => ['rounds', 'stand', 'cross'].includes(t[0])).map(([k, l]) => c0 ? `<a class="${!home && R_.tab === k ? 'on' : ''}" href="${cb}/${k}">${l}</a>` : `<span class="dis">${l}</span>`).join('')}</div>`;
+    if (home) return h + vTnSettings(tn);
     if (!cat) return h + '<div class="note">Bu turnuvada henüz kategori yok. “+ Kategori” ile ekleyin.</div>';
-    h += A.flowBar(cat.started && R_.tab === 'ayar' ? 6 : (FLOWSTEP[R_.tab] || 2), flowHref);
-    h += `<div class="subtabs noprint">${TABS.map(([k, l]) => `<a class="${R_.tab === k ? 'on' : ''}" href="#/t/${tn.id}/${cat.id}/${k}">${l}</a>`).join('')}</div>`;
     const v = A.views.cat;
     return h + (v ? v(R_.tab, tn, cat) : '<div class="note err">Modül yüklenemedi.</div>');
   }
@@ -588,7 +587,7 @@
 
   function vTnSettings(tn) {
     const inf = (k, label, ph, type) => `<div><label>${label}</label><input data-act="info" data-a="${k}" type="${type || 'text'}" value="${esc(tn.info[k] == null ? '' : tn.info[k])}" ${ph ? `placeholder="${esc(ph)}"` : ''} maxlength="150"></div>`;
-    return `<h2>Turnuva ayarları</h2><div class="card">
+    return `<h2>Turnuva bilgileri</h2><div class="card">
       <div class="row frm">${inf('name', 'Turnuva adı')}${inf('date', 'Başlama tarihi', '', 'date')}${inf('dateEnd', 'Bitiş tarihi', '', 'date')}</div>
       <div class="row frm" style="margin-top:10px">${inf('place', 'Yer')}${inf('organizer', 'Organizatör(ler)')}${inf('tempo', 'Zaman kontrolü', '35+30')}${inf('federation', 'Federasyon', 'TUR')}</div>
       <div class="row" style="margin-top:10px">${inf('director', 'Turnuva direktörü')}${inf('arbiter', 'Başhakem')}${inf('deputy', 'Başhakem yardımcısı')}${inf('referees', 'Hakemler')}</div>

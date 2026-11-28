@@ -152,9 +152,9 @@
           res.schedule = S; res.found.push('Tur programı (' + maxR + ' tur)');
           if (!res.rounds) res.rounds = maxR;
           else if (res.rounds !== maxR) res.warnings.push(`Sistem satırında ${res.rounds} tur, program tablosunda ${maxR} tur var; kontrol edin.`);
-        } else res.warnings.push('Tur programı tam okunamadı' + (gaps.length ? ' (eksik turlar: ' + gaps.join(', ') + ')' : '') + '; “Tur ve zaman bilgileri” sayfasından girin.');
-      } else res.warnings.push('Tur programı tablosu okunamadı; “Tur ve zaman bilgileri” sayfasından girin.');
-    } else res.warnings.push('Tur programı tablosu bulunamadı; “Tur ve zaman bilgileri” sayfasından girin.');
+        } else res.warnings.push('Tur programı tam okunamadı' + (gaps.length ? ' (eksik turlar: ' + gaps.join(', ') + ')' : '') + '; “Kategori ve tur başlat” sayfasından girin.');
+      } else res.warnings.push('Tur programı tablosu okunamadı; “Kategori ve tur başlat” sayfasından girin.');
+    } else res.warnings.push('Tur programı tablosu bulunamadı; “Kategori ve tur başlat” sayfasından girin.');
 
     res.ok = res.found.filter(f => f !== 'Turnuva adı').length >= 2;
     if (!res.ok) res.warnings.push('Bu dosya bir yarışma yönergesine benzemiyor.');
